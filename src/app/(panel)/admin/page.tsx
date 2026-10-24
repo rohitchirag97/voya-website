@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { button, Card, danger, first, Flash, fmt, ghost, Hidden, IdemKey, input, Pill } from "@/components/ui";
 import { api, isStaff, requireMe, type StaffRole } from "@/lib/api";
-import { decideSeller, mintCoins, setStaffRole } from "../../actions";
+import { decideSeller, mintCoins, setSpecialId, setStaffRole } from "../../actions";
 
 type AdminUser = {
   userId: string;
@@ -66,7 +66,7 @@ export default async function AdminUsers({ searchParams }: PageProps<"/admin">) 
                 </span>
               }
             >
-              <div className="grid gap-4 lg:grid-cols-3">
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                 {owner && (
                   <form action={setStaffRole} className="space-y-2">
                     <Hidden name="userId" value={u.userId} />
@@ -88,6 +88,28 @@ export default async function AdminUsers({ searchParams }: PageProps<"/admin">) 
                     {self && <p className="text-xs text-muted">That’s you. To step down, make someone else the owner.</p>}
                   </form>
                 )}
+
+                <div className="space-y-2">
+                  <form action={setSpecialId}>
+                    <Hidden name="userId" value={u.userId} />
+                    <Hidden name="back" value={back} />
+                    <label className="block text-xs font-semibold text-muted">
+                      Special ID (3–9 digits)
+                      <div className="mt-1.5 flex gap-2">
+                        <input name="specialId" defaultValue={u.specialId ?? ""} required inputMode="numeric" pattern="\d{3,9}" placeholder="e.g. 888" className={`${input} w-full`} />
+                        <button className={ghost}>{u.specialId ? "Change" : "Give"}</button>
+                      </div>
+                    </label>
+                  </form>
+                  {u.specialId && (
+                    <form action={setSpecialId}>
+                      <Hidden name="userId" value={u.userId} />
+                      <Hidden name="back" value={back} />
+                      <Hidden name="specialId" value="" />
+                      <button className={`${danger} h-8 px-3 text-xs`}>Remove special ID {u.specialId}</button>
+                    </form>
+                  )}
+                </div>
 
                 <form action={decideSeller} className="space-y-2">
                   <Hidden name="userId" value={u.userId} />

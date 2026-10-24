@@ -107,6 +107,15 @@ export async function setStaffRole(f: FormData) {
   });
 }
 
+// Empty specialId removes it.
+export async function setSpecialId(f: FormData) {
+  const specialId = str(f, "specialId") || null;
+  await run(backTo(f, "/admin"), async () => {
+    await api("POST", `/admin/users/${str(f, "userId")}/special-id`, { specialId });
+    return specialId ? `Special ID ${specialId} given` : "Special ID removed";
+  });
+}
+
 export async function decideSeller(f: FormData) {
   const approve = str(f, "approve") === "true";
   await run(backTo(f, "/admin/sellers"), async () => {
