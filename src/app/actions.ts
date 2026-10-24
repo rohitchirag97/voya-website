@@ -30,10 +30,20 @@ async function run(back: string, fn: () => Promise<string>) {
   } catch (e) {
     if (!(e instanceof ApiError)) throw e;
     if (e.status === 401) redirect("/login");
-    to = withMsg(back, "error", e.message);
+    to = withMsg(back, "error", friendly(e));
   }
   redirect(to);
 }
+
+// API messages written for people pass through; technical ones (validation dumps, bare codes) get a plain sentence.
+const FRIENDLY: Record<string, string> = {
+  VALIDATION_ERROR: "Please check what you entered. Amounts must be whole numbers from 1 to 1,00,00,000.",
+  USER_NOT_FOUND: "We couldn’t find that user. Check the ID or name and try again.",
+  FORBIDDEN: "Your account isn’t allowed to do that.",
+  RATE_LIMITED: "Too many attempts in a short time. Wait a minute and try again.",
+  INTERNAL: "Something went wrong on our side. Nothing was changed. Please try again.",
+};
+const friendly = (e: ApiError) => FRIENDLY[e.code] ?? (e.message === e.code || /^[A-Z_]+$/.test(e.message) ? "That didn’t work. Please try again." : e.message);
 
 const fmt = (n: number) => n.toLocaleString("en-IN");
 

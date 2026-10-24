@@ -11,7 +11,7 @@ type AdminUser = {
   staffRole: StaffRole | null;
   status: string;
   coins: number | null;
-  seller: { status: "PENDING" | "APPROVED" | "REJECTED" | null; balance: number | null; parentId: string | null };
+  seller: { status: "PENDING" | "APPROVED" | "REJECTED"; balance: number; parentId: string | null } | null; // null: never applied
 };
 
 const ROLES: StaffRole[] = ["SUPPORT", "MODERATOR", "ADMIN", "OWNER"];
@@ -22,7 +22,9 @@ export default async function AdminUsers({ searchParams }: PageProps<"/admin">) 
   if (!isStaff(me)) redirect("/dashboard");
   const sp = await searchParams;
   const q = first(sp.q).trim();
-  const users = q ? (await api<{ users: AdminUser[] }>("GET", `/admin/users?q=${encodeURIComponent(q)}`)).users : [];
+  // A bad search shows a message instead of the error page.
+  const found = q ? await api<{ users: AdminUser[] }>("GET", `/admin/users?q=${encodeURIComponent(q)}`).catch(() => null) : { users: [] };
+  const users = found?.users ?? [];
   const back = `/admin?q=${encodeURIComponent(q)}`;
   const owner = me.staffRole === "OWNER";
 
@@ -34,18 +36,18 @@ export default async function AdminUsers({ searchParams }: PageProps<"/admin">) 
           {owner ? "As owner you can give any staff role, hand over ownership, and manage coin sellers." : "As admin you can manage coin sellers. Only the owner changes staff roles."}
         </p>
       </div>
-      <Flash ok={sp.ok} error={sp.error} />
+      <Flash ok={sp.ok} error={sp.error || (found ? undefined : "Search didn’t work. Use a profile ID, special ID, or the start of a name (up to 40 characters).")} />
 
       <form className="flex gap-2">
         <input name="q" defaultValue={q} required placeholder="Profile ID, special ID, or name" className={`${input} w-full max-w-md`} aria-label="Search users" />
         <button className={button}>Search</button>
       </form>
 
-      {q && !users.length && <p className="text-sm text-muted">No users match “{q}”.</p>}
+      {q && found && !users.length && <p className="text-sm text-muted">No users match “{q}”.</p>}
 
       <div className="space-y-4">
         {users.map((u) => {
-          const seller = u.seller.status === "APPROVED";
+          const seller = u.seller?.status === "APPROVED";
           const self = u.userId === me.userId;
           return (
             <Card
@@ -56,11 +58,11 @@ export default async function AdminUsers({ searchParams }: PageProps<"/admin">) 
                   <span className="font-mono">ID {u.publicId}</span>
                   {u.specialId && <Pill tone="gold">Special {u.specialId}</Pill>}
                   {u.staffRole && <Pill tone={u.staffRole === "OWNER" ? "gold" : "primary"}>{u.staffRole}</Pill>}
-                  {seller && <Pill tone="success">{u.seller.parentId ? "Sub seller" : "Coin seller"}</Pill>}
-                  {u.seller.status === "PENDING" && <Pill>Seller application pending</Pill>}
+                  {seller && <Pill tone="success">{u.seller?.parentId ? "Sub seller" : "Coin seller"}</Pill>}
+                  {u.seller?.status === "PENDING" && <Pill>Seller application pending</Pill>}
                   {u.status !== "ACTIVE" && <Pill tone="danger">{u.status}</Pill>}
                   <span>· {fmt(u.coins ?? 0)} coins in main wallet</span>
-                  {seller && <span>· {fmt(u.seller.balance ?? 0)} in seller wallet</span>}
+                  {seller && <span>· {fmt(u.seller?.balance ?? 0)} in seller wallet</span>}
                 </span>
               }
             >
@@ -92,7 +94,7 @@ export default async function AdminUsers({ searchParams }: PageProps<"/admin">) 
                   <Hidden name="back" value={back} />
                   <Hidden name="approve" value={String(!seller)} />
                   <p className="text-xs font-semibold text-muted">Coin seller tag</p>
-                  <button className={seller ? danger : ghost}>{seller ? "Revoke seller" : u.seller.status === "PENDING" ? "Approve application" : "Make coin seller"}</button>
+                  <button className={seller ? danger : ghost}>{seller ? "Revoke seller" : u.seller?.status === "PENDING" ? "Approve application" : "Make coin seller"}</button>
                 </form>
 
                 {seller && (
