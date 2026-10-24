@@ -1,0 +1,54 @@
+@import "tailwindcss";
+
+/* VoyaLive palette, same as the app (app/src/theme.ts): bright panel screens, a night-party palette for the hero. */
+:root {
+  --bg: #f7f6fc;
+  --surface: #ffffff;
+  --surface-high: #f0edfa;
+  --border: #e7e3f3;
+  --text: #17132e;
+  --muted: #77708f;
+  --primary: #ff3d8b;
+  --accent: #7c3aed;
+  --gold: #e8920c;
+  --success: #10b981;
+  --danger: #ef4444;
+  --night: #120b2e;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-high: var(--surface-high);
+  --color-line: var(--border);
+  --color-ink: var(--text);
+  --color-muted: var(--muted);
+  --color-primary: var(--primary);
+  --color-accent: var(--accent);
+  --color-gold: var(--gold);
+  --color-success: var(--success);
+  --color-danger: var(--danger);
+  --color-night: var(--night);
+  --font-sans: var(--font-jakarta);
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+}
+
+/* Speaking ring on the hero's seats. */
+@keyframes speak {
+  0% { transform: scale(1); opacity: 0.7; }
+  100% { transform: scale(1.45); opacity: 0; }
+}
+@keyframes float-up {
+  0% { transform: translateY(0); opacity: 0; }
+  15% { opacity: 1; }
+  100% { transform: translateY(-90px); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-speak, .animate-float { animation: none !important; }
+}
+.animate-speak { animation: speak 1.6s ease-out infinite; }
+.animate-float { animation: float-up 3.2s ease-out infinite; }
