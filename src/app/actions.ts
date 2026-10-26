@@ -39,6 +39,8 @@ async function run(back: string, fn: () => Promise<string>) {
 const FRIENDLY: Record<string, string> = {
   VALIDATION_ERROR: "Please check what you entered. Amounts must be whole numbers from 1 to 1,00,00,000.",
   USER_NOT_FOUND: "We couldn’t find that user. Check the ID or name and try again.",
+  CANNOT_BAN_STAFF: "Staff can’t be banned. Remove their staff role first.",
+  CANNOT_BAN_SELF: "You can’t ban yourself.",
   FORBIDDEN: "Your account isn’t allowed to do that.",
   RATE_LIMITED: "Too many attempts in a short time. Wait a minute and try again.",
   INTERNAL: "Something went wrong on our side. Nothing was changed. Please try again.",
@@ -113,6 +115,24 @@ export async function setSpecialId(f: FormData) {
   await run(backTo(f, "/admin"), async () => {
     await api("POST", `/admin/users/${str(f, "userId")}/special-id`, { specialId });
     return specialId ? `Special ID ${specialId} given` : "Special ID removed";
+  });
+}
+
+const BAN_LABEL: Record<string, string> = { "24h": "24 hours", "3d": "3 days", "7d": "7 days", "1m": "1 month", "1y": "1 year", life: "life" };
+
+// Ban for a while or for good; they're signed out at once and see the reason and end time when they try to sign in.
+export async function banUser(f: FormData) {
+  const duration = str(f, "duration");
+  await run(backTo(f, "/admin"), async () => {
+    await api("POST", `/admin/users/${str(f, "userId")}/ban`, { duration, reason: str(f, "reason") });
+    return duration === "life" ? "User banned for life" : `User banned for ${BAN_LABEL[duration] ?? duration}`;
+  });
+}
+
+export async function unbanUser(f: FormData) {
+  await run(backTo(f, "/admin"), async () => {
+    await api("POST", `/admin/users/${str(f, "userId")}/unban`);
+    return "User unbanned. They can sign in again.";
   });
 }
 

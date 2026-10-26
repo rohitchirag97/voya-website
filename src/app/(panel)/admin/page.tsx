@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { button, Card, danger, first, Flash, fmt, ghost, Hidden, IdemKey, input, Pill } from "@/components/ui";
 import { api, isStaff, requireMe, type StaffRole } from "@/lib/api";
-import { decideSeller, mintCoins, setSpecialId, setStaffRole } from "../../actions";
+import { banUser, decideSeller, mintCoins, setSpecialId, setStaffRole, unbanUser } from "../../actions";
 
 type AdminUser = {
   userId: string;
@@ -10,11 +10,23 @@ type AdminUser = {
   specialId: string | null;
   staffRole: StaffRole | null;
   status: string;
+  bannedUntil: string | null; // status BANNED: when it lifts (null = lifetime)
+  banReason: string | null;
   coins: number | null;
   seller: { status: "PENDING" | "APPROVED" | "REJECTED"; balance: number; parentId: string | null } | null; // null: never applied
 };
 
 const ROLES: StaffRole[] = ["SUPPORT", "MODERATOR", "ADMIN", "OWNER"];
+const BAN_LENGTHS = [
+  ["24h", "24 hours"],
+  ["3d", "3 days"],
+  ["7d", "7 days"],
+  ["1m", "1 month"],
+  ["1y", "1 year"],
+  ["life", "Lifetime"],
+] as const;
+// India time, e.g. "2 Nov 2026, 3:45 pm".
+const when = (iso: string) => new Date(iso).toLocaleString("en-IN", { timeZone: "Asia/Kolkata", day: "numeric", month: "short", year: "numeric", hour: "numeric", minute: "2-digit" });
 
 // Find a user, then set their staff role (owner only), coin seller tag, or top up their seller wallet.
 export default async function AdminUsers({ searchParams }: PageProps<"/admin">) {
@@ -118,6 +130,39 @@ export default async function AdminUsers({ searchParams }: PageProps<"/admin">) 
                   <p className="text-xs font-semibold text-muted">Coin seller tag</p>
                   <button className={seller ? danger : ghost}>{seller ? "Revoke seller" : u.seller?.status === "PENDING" ? "Approve application" : "Make coin seller"}</button>
                 </form>
+
+                {/* Ban / unban: not for staff (change their role first) or yourself. */}
+                {!u.staffRole && !self && (
+                  u.status === "BANNED" ? (
+                    <form action={unbanUser} className="space-y-2">
+                      <Hidden name="userId" value={u.userId} />
+                      <Hidden name="back" value={back} />
+                      <p className="text-xs font-semibold text-muted">Banned</p>
+                      <p className="text-sm">
+                        {u.bannedUntil ? <>Until <span className="font-semibold">{when(u.bannedUntil)}</span></> : <span className="font-semibold">For life</span>}
+                        {u.banReason && <span className="block text-muted">Reason: {u.banReason}</span>}
+                      </p>
+                      <button className={ghost}>Unban</button>
+                    </form>
+                  ) : (
+                    <form action={banUser} className="space-y-2">
+                      <Hidden name="userId" value={u.userId} />
+                      <Hidden name="back" value={back} />
+                      <label className="block text-xs font-semibold text-muted">
+                        Ban user
+                        <select name="duration" defaultValue="24h" className={`${input} mt-1.5 w-full`} aria-label="Ban length">
+                          {BAN_LENGTHS.map(([v, label]) => (
+                            <option key={v} value={v}>
+                              {label}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <textarea name="reason" required minLength={3} maxLength={300} rows={2} placeholder="Reason (they’ll see this)" className={`${input} h-auto w-full py-2`} aria-label="Ban reason" />
+                      <button className={danger}>Ban</button>
+                    </form>
+                  )
+                )}
 
                 {seller && (
                   <form action={mintCoins} className="space-y-2">
