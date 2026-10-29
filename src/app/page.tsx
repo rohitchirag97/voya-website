@@ -38,6 +38,7 @@ function Hero() {
         <div className="flex items-center gap-1 text-sm font-semibold sm:gap-2">
           <a href="#features" className="hidden rounded-lg px-3 py-2 text-white/75 hover:text-white sm:block">Features</a>
           <a href="#safety" className="hidden rounded-lg px-3 py-2 text-white/75 hover:text-white sm:block">Safety</a>
+          <Link href="/salary" className="hidden rounded-lg px-3 py-2 text-white/75 hover:text-white sm:block">Host salary</Link>
           <Link href="/login" className="rounded-lg border border-white/20 px-3 py-2 hover:bg-white/10">Seller &amp; staff sign in</Link>
         </div>
       </nav>
@@ -198,6 +199,7 @@ function Footer() {
       <Logo />
       <div className="flex flex-wrap gap-x-6 gap-y-2">
         {supportEmail && <a href={`mailto:${supportEmail}`} className="hover:text-ink">{supportEmail}</a>}
+        <Link href="/salary" className="hover:text-ink">Host salary levels</Link>
         <Link href="/login" className="hover:text-ink">Seller &amp; staff sign in</Link>
         <span>© {new Date().getFullYear()} VoyaLive</span>
       </div>

@@ -16,10 +16,11 @@ export class ApiError extends Error {
 // Calls the VoyaLive API from the server with the signed-in user's token.
 export async function api<T>(method: string, path: string, body?: unknown): Promise<T> {
   const token = (await cookies()).get(ACCESS)?.value;
+  const form = body instanceof FormData; // file uploads go as multipart; fetch sets the boundary
   const res = await fetch(`${process.env.API_URL}/v1${path}`, {
     method,
-    headers: { "content-type": "application/json", ...(token && { authorization: `Bearer ${token}` }) },
-    body: body === undefined ? undefined : JSON.stringify(body),
+    headers: { ...(!form && { "content-type": "application/json" }), ...(token && { authorization: `Bearer ${token}` }) },
+    body: body === undefined ? undefined : form ? body : JSON.stringify(body),
     cache: "no-store",
   });
   const data = await res.json().catch(() => ({}));

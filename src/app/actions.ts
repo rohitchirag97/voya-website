@@ -151,6 +151,53 @@ export async function mintCoins(f: FormData) {
   });
 }
 
+// ---------- agencies ----------
+
+export async function createAgency(f: FormData) {
+  await run("/admin/agencies", async () => {
+    const a = await api<{ name: string; code: number }>("POST", "/admin/agencies", { owner: str(f, "owner"), name: str(f, "name") });
+    return `Agency "${a.name}" created. Its Agency ID is ${a.code}.`;
+  });
+}
+
+const AGENCY_DONE = { ACTIVE: "Agency is active", SUSPENDED: "Agency suspended", CLOSED: "Agency closed. All its hosts were let go." } as Record<string, string>;
+export async function updateAgency(f: FormData) {
+  const status = str(f, "status") || undefined;
+  const name = str(f, "name") || undefined;
+  await run("/admin/agencies", async () => {
+    await api("PATCH", `/admin/agencies/${str(f, "agencyId")}`, { status, name });
+    return status ? AGENCY_DONE[status]! : "Agency renamed";
+  });
+}
+
+export async function setAgencyImage(f: FormData) {
+  const file = f.get("file");
+  await run("/admin/agencies", async () => {
+    const body = new FormData();
+    if (file instanceof File && file.size) body.append("file", file);
+    await api("POST", `/admin/agencies/${str(f, "agencyId")}/image`, body);
+    return "Agency image updated";
+  });
+}
+
+// ---------- salaries and withdrawals ----------
+
+export async function paySalaries(f: FormData) {
+  const month = str(f, "month");
+  await run(`/admin/salaries?month=${month}`, async () => {
+    await api("POST", `/admin/salaries/${month}/pay`);
+    return `Salaries for ${month} paid`;
+  });
+}
+
+export async function decideWithdrawal(f: FormData) {
+  const paid = str(f, "paid") === "true";
+  await run(backTo(f, "/admin/withdrawals"), async () => {
+    await api("POST", `/admin/withdrawals/${str(f, "id")}/decision`, { paid, note: str(f, "note") || null });
+    return paid ? "Marked as paid" : "Rejected. The amount went back to their balance.";
+  });
+}
+
 // ---------- seller ----------
 
 export async function sellCoins(f: FormData) {

@@ -13,6 +13,9 @@ export default async function PanelLayout({ children }: LayoutProps<"/">) {
       ? [
           { href: "/admin", label: "Users & roles" },
           { href: "/admin/sellers", label: "Coin sellers" },
+          { href: "/admin/agencies", label: "Agencies" },
+          { href: "/admin/salaries", label: "Salaries" },
+          { href: "/admin/withdrawals", label: "Withdrawals" },
         ]
       : []),
     ...(seller ? [{ href: "/seller", label: "My seller wallet" }] : []),
