@@ -38,7 +38,7 @@ export default async function Svip({ searchParams }: PageProps<"/admin/svip">) {
       </div>
       <Flash ok={sp.ok} error={sp.error} />
 
-      <Card title="Tier animations" hint="Empty: that tier doesn't have this animation. SVGA files up to 15 MB.">
+      <Card title="Tier animations" hint="Empty: that tier doesn't have this design. SVGA (up to 15 MB) or a PNG/WebP picture (up to 2 MB, shown still).">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[720px] text-sm">
             <thead>
@@ -64,7 +64,7 @@ export default async function Svip({ searchParams }: PageProps<"/admin/svip">) {
                           <form action={uploadSvipFx} className="flex flex-col gap-1">
                             <Hidden name="kind" value={f.kind} />
                             <Hidden name="tier" value={String(tier)} />
-                            <input name="svga" type="file" accept=".svga" required className="w-40 text-xs" aria-label={`New SVGA for SVIP${tier} ${f.title}`} />
+                            <input name="svga" type="file" accept=".svga,image/png,image/webp,image/jpeg" required className="w-40 text-xs" aria-label={`New SVGA or picture for SVIP${tier} ${f.title}`} />
                             <button className={`${ghost} h-8 w-fit px-3 text-xs`}>{a ? "Replace" : "Add"}</button>
                           </form>
                           {a && (
