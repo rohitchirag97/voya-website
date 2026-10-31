@@ -3,6 +3,7 @@
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { api, ApiError } from "@/lib/api";
+import type { Part, Prize } from "@/lib/rewards";
 import { ACCESS, REFRESH, setTokens, type Tokens } from "@/lib/session";
 
 // Every action re-checks nothing itself: the API enforces who may do what. These only shape requests and messages.
@@ -285,21 +286,17 @@ export async function updateCategory(f: FormData) {
 
 // ---------- events ----------
 
-type EventReward = { coins?: number; badgeId?: string; badgeDays?: number | null };
+// Boards and tasks as the panel's builder sends them (components/EventBuilder.tsx); the API checks every field.
 type EventConfig = {
   page: { headerUrl: string | null; color: string; description: string; rules: string };
-  boards: { id: string; title: string; metric: string; eventGiftsOnly: boolean; size: number; rewards: (EventReward & { from: number; to: number })[] }[];
-  tasks: { id: string; title: string; metric: string; eventGiftsOnly: boolean; target: number; daily: boolean; reward: EventReward }[];
+  boards: (Part & { rewards: Prize[] })[];
+  tasks: Part[];
 };
 type AdminEvent = { id: string; title: string; config: EventConfig };
 
 // Times are typed in India time (datetime-local has no zone).
 const istDate = (f: FormData, k: string) => (str(f, k) ? new Date(`${str(f, k)}:00+05:30`).toISOString() : undefined);
 const num = (f: FormData, k: string) => Number(str(f, k).replace(/[, ]/g, "") || 0);
-const rewardOf = (f: FormData, prefix: string): EventReward => ({
-  ...(num(f, `${prefix}coins`) ? { coins: num(f, `${prefix}coins`) } : {}),
-  ...(str(f, `${prefix}badge`) ? { badgeId: str(f, `${prefix}badge`), badgeDays: num(f, `${prefix}days`) || null } : {}),
-});
 const eventPath = (id: string) => `/admin/events/${encodeURIComponent(id)}`;
 // Read-change-write the event's settings (boards and tasks live inside them).
 async function changeConfig(id: string, change: (c: EventConfig) => EventConfig) {
@@ -338,6 +335,7 @@ export async function saveEventBasics(f: FormData) {
       bannerHome: f.get("bannerHome") === "on",
       bannerRoom: f.get("bannerRoom") === "on",
       homeTab: str(f, "homeTab") || "BOTH",
+      repeat: str(f, "repeat") || "NONE",
       sortOrder: num(f, "sortOrder"),
       giftCategoryId: str(f, "giftCategoryId") ? num(f, "giftCategoryId") : null,
       config: { ...e.config, page: { ...e.config.page, color: str(f, "color") || "#08C9D9", description: str(f, "description"), rules: str(f, "rules") } },
@@ -358,24 +356,25 @@ export async function uploadEventImage(f: FormData) {
   });
 }
 
+// The builder's JSON for one board or task ("part").
+const partOf = (f: FormData): Part => {
+  try {
+    return JSON.parse(String(f.get("part") ?? ""));
+  } catch {
+    throw new ApiError(400, "VALIDATION_ERROR", "That didn't save. Reload the page and try again.");
+  }
+};
+
 export async function saveEventBoard(f: FormData) {
   const id = str(f, "id");
   const index = str(f, "index");
   await run(eventPath(id), async () => {
-    const rewards = [0, 1, 2, 3, 4]
-      .map((i) => ({ from: num(f, `r${i}from`), to: num(f, `r${i}to`) || num(f, `r${i}from`), min: num(f, `r${i}min`), ...rewardOf(f, `r${i}`) }))
-      .filter((r) => r.from > 0 && (r.coins || r.badgeId));
-    const missing = rewards.find((r) => r.min < 1);
+    const p = partOf(f);
+    const rewards = p.metric === "ROOM_GIFTS" ? [] : (p.rewards ?? []).filter((r) => r.items.length);
+    const missing = rewards.find((r) => !r.min || r.min < 1);
     if (missing) throw new ApiError(400, "VALIDATION_ERROR", `Set a minimum score for the prize of rank ${missing.from}${missing.to > missing.from ? ` to ${missing.to}` : ""}`);
     await changeConfig(id, (c) => {
-      const board = {
-        id: index === "" ? "" : c.boards[Number(index)]!.id,
-        title: str(f, "title"),
-        metric: str(f, "metric"),
-        eventGiftsOnly: f.get("eventGiftsOnly") === "on",
-        size: num(f, "size") || 10,
-        rewards,
-      };
+      const board = { id: index === "" ? "" : c.boards[Number(index)]!.id, title: p.title, metric: p.metric, game: p.game, filters: p.filters, size: p.size ?? 10, rewards };
       return { ...c, boards: index === "" ? [...c.boards, board] : c.boards.map((b, i) => (i === Number(index) ? board : b)) };
     });
     return "Leaderboard saved";
@@ -386,16 +385,10 @@ export async function saveEventTask(f: FormData) {
   const id = str(f, "id");
   const index = str(f, "index");
   await run(eventPath(id), async () => {
+    const p = partOf(f);
+    if (!p.reward?.items.length) throw new ApiError(400, "VALIDATION_ERROR", "Add at least one reward item to the task");
     await changeConfig(id, (c) => {
-      const task = {
-        id: index === "" ? "" : c.tasks[Number(index)]!.id,
-        title: str(f, "title"),
-        metric: str(f, "metric"),
-        eventGiftsOnly: f.get("eventGiftsOnly") === "on",
-        target: num(f, "target"),
-        daily: f.get("daily") === "on",
-        reward: rewardOf(f, ""),
-      };
+      const task = { id: index === "" ? "" : c.tasks[Number(index)]!.id, title: p.title, metric: p.metric, game: p.game, filters: p.filters, target: p.target ?? 0, daily: !!p.daily, reward: p.reward! };
       return { ...c, tasks: index === "" ? [...c.tasks, task] : c.tasks.map((t, i) => (i === Number(index) ? task : t)) };
     });
     return "Task saved";
@@ -405,7 +398,7 @@ export async function saveEventTask(f: FormData) {
 export async function removeEventPart(f: FormData) {
   const id = str(f, "id");
   const kind = str(f, "kind") === "task" ? "tasks" : "boards";
-  const index = Number(str(f, "index"));
+  const index = Number(str(f, "removeIndex") || str(f, "index"));
   await run(eventPath(id), async () => {
     await changeConfig(id, (c) => ({ ...c, [kind]: (c[kind] as unknown[]).filter((_, i) => i !== index) }));
     return kind === "tasks" ? "Task removed" : "Leaderboard removed";
@@ -415,8 +408,8 @@ export async function removeEventPart(f: FormData) {
 export async function approveEventPayouts(f: FormData) {
   const id = str(f, "id");
   await run(eventPath(id), async () => {
-    const r = await api<{ paid: number; badgeFailures: string[] }>("POST", `${eventPath(id)}/payouts/approve`);
-    return `${r.paid} ${r.paid === 1 ? "reward" : "rewards"} paid${r.badgeFailures.length ? `. Badges failed for: ${r.badgeFailures.join(", ")}` : ""}`;
+    const r = await api<{ paid: number; failures: string[] }>("POST", `${eventPath(id)}/payouts/approve`);
+    return `${r.paid} ${r.paid === 1 ? "reward" : "rewards"} paid${r.failures.length ? `. These items couldn't be given (check they still exist in Items): ${r.failures.join(", ")}` : ""}`;
   });
 }
 
@@ -467,5 +460,37 @@ export async function deleteNotice(f: FormData) {
   await run(NOTICES, async () => {
     await api("DELETE", `${NOTICES}/${encodeURIComponent(str(f, "id"))}`);
     return "Notice deleted";
+  });
+}
+
+// ---------- prize items ----------
+
+const ITEMS = "/admin/items";
+// The item form as the API wants it: text fields, colours (bubbles), and the picture / animation files if chosen.
+const itemBody = (f: FormData, editing: boolean) => {
+  const body = new FormData();
+  for (const k of ["name", "description", "from", "to", "border", "text"]) if (str(f, k)) body.append(k, str(f, k));
+  if (editing) body.append("enabled", f.get("enabled") === "on" ? "true" : "false");
+  for (const k of ["image", "svga"]) {
+    const file = f.get(k);
+    if (file instanceof File && file.size) body.append(k, file);
+  }
+  return body;
+};
+const KIND_NAME: Record<string, string> = { BADGE: "Badge", AVATAR_FRAME: "Frame", CHAT_BUBBLE: "Chat bubble", ENTRY_EFFECT: "Entry effect" };
+
+export async function createItem(f: FormData) {
+  const kind = str(f, "kind");
+  await run(ITEMS, async () => {
+    await api("POST", `${ITEMS}/${encodeURIComponent(kind)}`, itemBody(f, false));
+    return `${KIND_NAME[kind] ?? "Item"} "${str(f, "name")}" added. Add it to a prize in an event.`;
+  });
+}
+
+export async function updateItem(f: FormData) {
+  const kind = str(f, "kind");
+  await run(ITEMS, async () => {
+    await api("PATCH", `${ITEMS}/${encodeURIComponent(kind)}/${encodeURIComponent(str(f, "itemId"))}`, itemBody(f, true));
+    return `"${str(f, "name")}" saved`;
   });
 }

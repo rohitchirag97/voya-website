@@ -23,6 +23,7 @@ export default async function PanelLayout({ children }: LayoutProps<"/">) {
               { href: "/admin/gifts", label: "Gifts", icon: "gift" as const },
               { href: "/admin/events", label: "Events", icon: "trophy" as const },
               { href: "/admin/notices", label: "Notices", icon: "megaphone" as const },
+              { href: "/admin/items", label: "Prize items", icon: "gift" as const },
             ],
           },
           {

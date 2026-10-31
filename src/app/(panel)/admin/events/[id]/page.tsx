@@ -1,13 +1,12 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { button, Card, danger, Flash, fmt, ghost, Hidden, input, ist, Pill } from "@/components/ui";
+import { EventPartBuilder } from "@/components/EventBuilder";
+import { button, Card, danger, Flash, ghost, Hidden, input, ist, Pill } from "@/components/ui";
 import { api, isStaff, requireMe } from "@/lib/api";
+import { rewardText, type ItemOption, type Part, type Prize as RankPrize, type RewardItem } from "@/lib/rewards";
 import { approveEventPayouts, removeEventPart, saveEventBasics, saveEventBoard, saveEventTask, uploadEventImage } from "../../../../actions";
 
-type Reward = { coins?: number; badgeId?: string; badgeDays?: number | null };
-type Board = { id: string; title: string; metric: string; eventGiftsOnly: boolean; size: number; rewards: (Reward & { from: number; to: number; min?: number })[] };
-type Task = { id: string; title: string; metric: string; eventGiftsOnly: boolean; target: number; daily: boolean; reward: Reward };
 type Event = {
   id: string;
   title: string;
@@ -18,27 +17,26 @@ type Event = {
   bannerHome: boolean;
   bannerRoom: boolean;
   homeTab: "BOTH" | "LIVE" | "ROOMS";
+  repeat: "NONE" | "WEEKLY" | "MONTHLY";
   sortOrder: number;
   giftCategoryId: number | null;
   paidOutAt: string | null;
-  config: { page: { headerUrl: string | null; color: string; description: string; rules: string }; boards: Board[]; tasks: Task[] };
+  config: { page: { headerUrl: string | null; color: string; description: string; rules: string }; boards: (Part & { rewards: RankPrize[] })[]; tasks: Part[] };
 };
-type Options = { badges: { id: string; name: string }[]; categories: { id: number; name: string }[] };
-type Prize = { userId: string; why: string; reward: Reward; paid: boolean; user: { displayName: string | null; publicId?: number } | null };
+type Options = { items: ItemOption[]; categories: { id: number; name: string }[] };
+type Labels = { badges: Record<string, { name: string }>; items: Record<string, { name: string; kind: string }> };
+type Prize = { userId: string; why: string; reward: { items: RewardItem[] }; paid: boolean; user: { displayName: string | null; publicId?: number } | null };
 
-const METRICS = [
-  { v: "GIFTS_SENT", l: "Gifts sent (coins)" },
-  { v: "GIFTS_RECEIVED", l: "Gifts received (coins)" },
-  { v: "ROOM_GIFTS", l: "Room gift total (coins)" },
-  { v: "RECHARGE", l: "Recharge (coins received)" },
-];
+const METRIC_NAME: Record<string, string> = {
+  GIFTS_SENT: "gifts sent",
+  GIFTS_RECEIVED: "gifts received",
+  ROOM_GIFTS: "room gift total",
+  RECHARGE: "recharge coins",
+  GAME_WINS: "game winnings",
+  CP_POINTS: "CP points",
+};
 // datetime-local wants "YYYY-MM-DDTHH:mm" in India time.
 const local = (iso: string) => new Date(new Date(iso).getTime() + 5.5 * 3_600_000).toISOString().slice(0, 16);
-const rewardText = (r: Reward, badges: Options["badges"]) =>
-  [r.coins ? `${fmt(r.coins)} coins` : "", r.badgeId ? `${badges.find((b) => b.id === r.badgeId)?.name ?? r.badgeId} badge${r.badgeDays ? ` (${r.badgeDays} days)` : ""}` : ""]
-    .filter(Boolean)
-    .join(" + ") || "nothing";
-
 // One event: basics and look, banner and header, leaderboards, tasks, a live preview of its page, and its rewards.
 export default async function EventEditor({ params, searchParams }: PageProps<"/admin/events/[id]">) {
   const me = await requireMe();
@@ -49,7 +47,7 @@ export default async function EventEditor({ params, searchParams }: PageProps<"/
     api<Event>("GET", `/admin/events/${id}`),
     api<Options>("GET", "/admin/event-options"),
     api<{ phase: string }>("GET", `/events/${id}`),
-    api<{ phase: string; prizes: Prize[] }>("GET", `/admin/events/${id}/payouts`),
+    api<{ phase: string; prizes: Prize[]; labels: Labels }>("GET", `/admin/events/${id}/payouts`),
   ]);
   // Preview: the real event page with this event's data handed in (no login needed inside the frame).
   const html = await fetch(`${process.env.API_URL}/games/event/index.html`, { cache: "no-store" }).then((r) => r.text()).catch(() => "");
@@ -108,6 +106,16 @@ export default async function EventEditor({ params, searchParams }: PageProps<"/
                   <option value="ROOMS">Rooms tab only</option>
                 </select>
               </Field>
+              <Field label="Repeat">
+                <select name="repeat" defaultValue={e.repeat} className={input}>
+                  <option value="NONE">Never (one-off)</option>
+                  <option value="WEEKLY">Every week</option>
+                  <option value="MONTHLY">Every month</option>
+                </select>
+              </Field>
+              <p className="self-end pb-2 text-xs text-muted">
+                Repeating: when this period ends, the next one starts by itself with the same page, boards, tasks and prizes (fresh scores). Each period&apos;s rewards wait for your approval.
+              </p>
               <Field label="Description" wide>
                 <textarea name="description" maxLength={2000} rows={3} defaultValue={c.page.description} className={`${input} h-auto py-2`} />
               </Field>
@@ -146,23 +154,22 @@ export default async function EventEditor({ params, searchParams }: PageProps<"/
             </div>
           </Card>
 
-          <Card title="Leaderboards" hint="Live rankings for the event's time only. Rewards go to the ranks you set, after you approve them. Room boards are for show (no rewards).">
+          <Card title="Leaderboards" hint="Live rankings for the event's time only. Build what counts, then drag prizes onto each rank range. Room boards are for show (no prizes).">
             <div className="space-y-3">
               {c.boards.map((b, i) => (
                 <details key={b.id} className="rounded-xl border border-line">
                   <summary className="cursor-pointer px-3 py-2 text-sm font-semibold">
-                    {b.title} <span className="font-normal text-muted">({METRICS.find((m) => m.v === b.metric)?.l}, top {b.size})</span>
+                    {b.title} <span className="font-normal text-muted">({METRIC_NAME[b.metric] ?? b.metric}, top {b.size})</span>
                   </summary>
-                  <div className="space-y-2 px-3 pb-3">
-                    <BoardForm id={e.id} index={String(i)} board={b} badges={options.badges} />
-                    <Remove id={e.id} kind="board" index={i} />
+                  <div className="px-3 pb-3">
+                    <EventPartBuilder kind="board" eventId={e.id} index={String(i)} initial={b} items={options.items} categories={options.categories} action={saveEventBoard} onRemove={<Remove kind="board" index={i} />} />
                   </div>
                 </details>
               ))}
               <details className="rounded-xl border border-dashed border-line">
                 <summary className="cursor-pointer px-3 py-2 text-sm font-semibold text-primary-strong">Add a leaderboard</summary>
                 <div className="px-3 pb-3">
-                  <BoardForm id={e.id} index="" badges={options.badges} />
+                  <EventPartBuilder kind="board" eventId={e.id} index="" items={options.items} categories={options.categories} action={saveEventBoard} />
                 </div>
               </details>
             </div>
@@ -173,18 +180,17 @@ export default async function EventEditor({ params, searchParams }: PageProps<"/
               {c.tasks.map((t, i) => (
                 <details key={t.id} className="rounded-xl border border-line">
                   <summary className="cursor-pointer px-3 py-2 text-sm font-semibold">
-                    {t.title} <span className="font-normal text-muted">({rewardText(t.reward, options.badges)})</span>
+                    {t.title} <span className="font-normal text-muted">({rewardText(t.reward?.items ?? [], payouts.labels)})</span>
                   </summary>
-                  <div className="space-y-2 px-3 pb-3">
-                    <TaskForm id={e.id} index={String(i)} task={t} badges={options.badges} />
-                    <Remove id={e.id} kind="task" index={i} />
+                  <div className="px-3 pb-3">
+                    <EventPartBuilder kind="task" eventId={e.id} index={String(i)} initial={t} items={options.items} categories={options.categories} action={saveEventTask} onRemove={<Remove kind="task" index={i} />} />
                   </div>
                 </details>
               ))}
               <details className="rounded-xl border border-dashed border-line">
                 <summary className="cursor-pointer px-3 py-2 text-sm font-semibold text-primary-strong">Add a task</summary>
                 <div className="px-3 pb-3">
-                  <TaskForm id={e.id} index="" badges={options.badges} />
+                  <EventPartBuilder kind="task" eventId={e.id} index="" items={options.items} categories={options.categories} action={saveEventTask} />
                 </div>
               </details>
             </div>
@@ -200,7 +206,7 @@ export default async function EventEditor({ params, searchParams }: PageProps<"/
                     <span className="min-w-0 flex-1">
                       <b>{p.user?.displayName ?? "Someone"}</b> <span className="text-muted">{p.why}</span>
                     </span>
-                    <span>{rewardText(p.reward, options.badges)}</span>
+                    <span>{rewardText(p.reward.items, payouts.labels)}</span>
                     <Pill tone={p.paid ? "success" : "gold"}>{p.paid ? "paid" : "to approve"}</Pill>
                   </li>
                 ))}
@@ -239,109 +245,15 @@ const Check = ({ name, on, label }: { name: string; on: boolean; label: string }
   </label>
 );
 
-function MetricSelect({ value, rooms = true }: { value?: string; rooms?: boolean }) {
-  return (
-    <select name="metric" defaultValue={value ?? "GIFTS_SENT"} className={input}>
-      {METRICS.filter((m) => rooms || m.v !== "ROOM_GIFTS").map((m) => (
-        <option key={m.v} value={m.v}>
-          {m.l}
-        </option>
-      ))}
-    </select>
-  );
-}
-
-function RewardInputs({ prefix, reward, badges }: { prefix: string; reward?: Reward; badges: Options["badges"] }) {
+// Sits inside the builder's form (which already carries the event id), so it posts to its own action (formAction).
+function Remove({ kind, index }: { kind: "board" | "task"; index: number }) {
   return (
     <>
-      <input name={`${prefix}coins`} inputMode="numeric" pattern="[0-9, ]*" placeholder="Coins" aria-label="Coins" defaultValue={reward?.coins ?? ""} className={`${input} w-24`} />
-      <select name={`${prefix}badge`} defaultValue={reward?.badgeId ?? ""} aria-label="Badge" className={`${input} w-40`}>
-        <option value="">No badge</option>
-        {badges.map((b) => (
-          <option key={b.id} value={b.id}>
-            {b.name}
-          </option>
-        ))}
-      </select>
-      <input name={`${prefix}days`} inputMode="numeric" pattern="[0-9]*" placeholder="Days" aria-label="Badge days (empty: forever)" defaultValue={reward?.badgeDays ?? ""} className={`${input} w-20`} />
+      <input type="hidden" name="kind" value={kind} />
+      <input type="hidden" name="removeIndex" value={String(index)} />
+      <button formAction={removeEventPart} formNoValidate className={danger}>
+        Remove {kind === "task" ? "task" : "leaderboard"}
+      </button>
     </>
-  );
-}
-
-function BoardForm({ id, index, board, badges }: { id: string; index: string; board?: Board; badges: Options["badges"] }) {
-  const rows = [...(board?.rewards ?? []), ...Array(5).fill(null)].slice(0, 5) as ((Reward & { from: number; to: number; min?: number }) | null)[];
-  return (
-    <form action={saveEventBoard} className="space-y-3">
-      <Hidden name="id" value={id} />
-      <Hidden name="index" value={index} />
-      <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_100px]">
-        <Field label="Title">
-          <input name="title" required maxLength={40} defaultValue={board?.title ?? "Top Gifters"} className={input} />
-        </Field>
-        <Field label="Counts">
-          <MetricSelect value={board?.metric} />
-        </Field>
-        <Field label="Ranks shown">
-          <input name="size" inputMode="numeric" pattern="[0-9]+" defaultValue={board?.size ?? 10} className={input} />
-        </Field>
-      </div>
-      <Check name="eventGiftsOnly" on={board?.eventGiftsOnly ?? false} label="Only count this event's gifts" />
-      <div className="space-y-2">
-        <p className="text-sm font-semibold">Rewards by rank (leave a row empty to skip it)</p>
-        <p className="text-xs text-muted">Every prize needs a minimum score: a rank that doesn&apos;t reach it wins nothing, so a few friends can&apos;t take a prize with a tiny total. It&apos;s shown on the event&apos;s Rules page.</p>
-        {rows.map((r, i) => (
-          <div key={i} className="flex flex-wrap items-center gap-2 text-sm">
-            Rank
-            <input name={`r${i}from`} inputMode="numeric" pattern="[0-9]*" aria-label="From rank" defaultValue={r?.from ?? ""} className={`${input} w-16`} />
-            to
-            <input name={`r${i}to`} inputMode="numeric" pattern="[0-9]*" aria-label="To rank" defaultValue={r?.to ?? ""} className={`${input} w-16`} />
-            <RewardInputs prefix={`r${i}`} reward={r ?? undefined} badges={badges} />
-            needs at least
-            <input name={`r${i}min`} inputMode="numeric" pattern="[0-9,]*" aria-label="Minimum score to win" placeholder="min" defaultValue={r?.min ?? ""} className={`${input} w-28`} />
-          </div>
-        ))}
-      </div>
-      <button className={ghost}>Save leaderboard</button>
-    </form>
-  );
-}
-
-function TaskForm({ id, index, task, badges }: { id: string; index: string; task?: Task; badges: Options["badges"] }) {
-  return (
-    <form action={saveEventTask} className="space-y-3">
-      <Hidden name="id" value={id} />
-      <Hidden name="index" value={index} />
-      <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_140px]">
-        <Field label="Title">
-          <input name="title" required maxLength={60} defaultValue={task?.title ?? ""} placeholder="Send 1,000 coins of gifts" className={input} />
-        </Field>
-        <Field label="Counts">
-          <MetricSelect value={task?.metric} rooms={false} />
-        </Field>
-        <Field label="Target">
-          <input name="target" required inputMode="numeric" pattern="[0-9, ]+" defaultValue={task?.target ?? ""} className={input} />
-        </Field>
-      </div>
-      <div className="flex flex-wrap items-center gap-4 text-sm font-semibold">
-        <Check name="eventGiftsOnly" on={task?.eventGiftsOnly ?? false} label="Only this event's gifts" />
-        <Check name="daily" on={task?.daily ?? false} label="Daily (resets each day)" />
-      </div>
-      <div className="flex flex-wrap items-center gap-2 text-sm">
-        Reward
-        <RewardInputs prefix="" reward={task?.reward} badges={badges} />
-      </div>
-      <button className={ghost}>Save task</button>
-    </form>
-  );
-}
-
-function Remove({ id, kind, index }: { id: string; kind: "board" | "task"; index: number }) {
-  return (
-    <form action={removeEventPart}>
-      <Hidden name="id" value={id} />
-      <Hidden name="kind" value={kind} />
-      <Hidden name="index" value={String(index)} />
-      <button className={danger}>Remove {kind === "task" ? "task" : "leaderboard"}</button>
-    </form>
   );
 }
