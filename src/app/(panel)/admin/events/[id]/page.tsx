@@ -30,7 +30,7 @@ const METRICS = [
   { v: "GIFTS_SENT", l: "Gifts sent (coins)" },
   { v: "GIFTS_RECEIVED", l: "Gifts received (coins)" },
   { v: "ROOM_GIFTS", l: "Room gift total (coins)" },
-  { v: "RECHARGE", l: "Recharge (rupees)" },
+  { v: "RECHARGE", l: "Recharge (coins received)" },
 ];
 // datetime-local wants "YYYY-MM-DDTHH:mm" in India time.
 const local = (iso: string) => new Date(new Date(iso).getTime() + 5.5 * 3_600_000).toISOString().slice(0, 16);
