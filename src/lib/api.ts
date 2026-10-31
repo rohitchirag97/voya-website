@@ -42,7 +42,8 @@ export async function requireMe() {
 }
 
 // Whether this user's role has a switch (pages redirect away otherwise; the API checks again on every action).
-export const can = (me: Me, perm: string) => (me.permissions ?? []).includes(perm);
+// The owner can always do everything, even if the server hasn't sent the list.
+export const can = (me: Me, perm: string) => me.staffRole === "OWNER" || (me.permissions ?? []).includes(perm);
 
 export async function sellerStatus() {
   return (await api<{ status: "PENDING" | "APPROVED" | "REJECTED" | null }>("GET", "/coin-sellers/me").catch(() => ({ status: null }))).status;

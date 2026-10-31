@@ -1,4 +1,4 @@
-import type { Me } from "./api";
+import { can, type Me } from "./api";
 
 // Every panel menu, the access switch it needs (server lib/permissions.ts), and its sidebar group. A staff member sees
 // only the menus their role allows; the dashboard sends them to the first one.
@@ -17,4 +17,4 @@ export const MENUS = [
   { group: "Money", href: "/admin/grants", label: "Give to user", icon: "coins", perm: "grants.give" },
 ] as const;
 
-export const menusFor = (me: Me) => MENUS.filter((m) => (me.permissions ?? []).includes(m.perm));
+export const menusFor = (me: Me) => MENUS.filter((m) => can(me, m.perm));

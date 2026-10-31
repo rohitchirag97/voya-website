@@ -17,6 +17,7 @@ type Item = {
   enabled: boolean;
   forPrize: boolean;
   forMall: boolean;
+  internal: boolean;
 };
 
 const KINDS: { kind: Kind; title: string; hint: string }[] = [
@@ -39,7 +40,10 @@ export default async function Items({ searchParams }: PageProps<"/admin/items">)
     <>
       <div>
         <h1 className="text-2xl font-extrabold">Items</h1>
-        <p className="mt-1 text-sm text-muted">Badges, frames, profile cards, chat bubbles and entry effects. Tick Event prize to use one in events, Mall item to sell it once the Mall opens.</p>
+        <p className="mt-1 text-sm text-muted">
+          Badges, frames, profile cards, chat bubbles and entry effects. Event prize: usable in events. Mall item: sold once the Mall opens. Internal only (e.g. staff frames): never a
+          prize or in the Mall, only given by staff. Hover a picture to play it.
+        </p>
       </div>
       <Flash ok={sp.ok} error={sp.error} />
 
@@ -66,6 +70,7 @@ export default async function Items({ searchParams }: PageProps<"/admin/items">)
                         {i.description && <span className="block truncate text-xs text-muted">{i.description}</span>}
                       </span>
                       <span className="flex flex-col items-end gap-1">
+                        {i.internal && <Pill tone="danger">Internal only</Pill>}
                         {i.forPrize && <Pill tone="gold">Event prize</Pill>}
                         {i.forMall && <Pill tone="primary">Mall</Pill>}
                         {!i.enabled && <Pill>hidden</Pill>}
@@ -146,6 +151,9 @@ function ItemForm({ kind, item }: { kind: Kind; item?: Item }) {
         </label>
         <label className="flex items-center gap-2">
           <input type="checkbox" name="forMall" defaultChecked={item?.forMall ?? false} className="h-4 w-4 accent-primary-strong" /> Mall item
+        </label>
+        <label className="flex items-center gap-2" title="Never an event prize or sold in the Mall. Only given by staff: Give to user, or a role's badge/frame.">
+          <input type="checkbox" name="internal" defaultChecked={item?.internal ?? false} className="h-4 w-4 accent-primary-strong" /> Internal only (staff gives it)
         </label>
         {item && (
           <label className="flex items-center gap-2">

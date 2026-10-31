@@ -473,6 +473,7 @@ const itemBody = (f: FormData, editing: boolean) => {
   if (editing) body.append("enabled", f.get("enabled") === "on" ? "true" : "false");
   body.append("forPrize", f.get("forPrize") === "on" ? "true" : "false");
   body.append("forMall", f.get("forMall") === "on" ? "true" : "false");
+  body.append("internal", f.get("internal") === "on" ? "true" : "false");
   for (const k of ["image", "svga"]) {
     const file = f.get(k);
     if (file instanceof File && file.size) body.append(k, file);
