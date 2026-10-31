@@ -237,7 +237,7 @@ export async function removeSubSeller(f: FormData) {
 // Sends the gift form on as multipart: text fields as typed, files only when chosen.
 const giftBody = (f: FormData) => {
   const body = new FormData();
-  for (const k of ["name", "coinPrice", "maxQuantity", "sortOrder", "enabled"]) if (str(f, k)) body.append(k, k === "name" ? str(f, k) : str(f, k).replace(/[, ]/g, ""));
+  for (const k of ["name", "categoryId", "coinPrice", "maxQuantity", "sortOrder", "enabled"]) if (str(f, k)) body.append(k, k === "name" ? str(f, k) : str(f, k).replace(/[, ]/g, ""));
   for (const k of ["icon", "effect"]) {
     const file = f.get(k);
     if (file instanceof File && file.size) body.append(k, file);
@@ -251,7 +251,7 @@ const giftCheck = (e: unknown) => {
 };
 
 export async function createGift(f: FormData) {
-  await run("/admin/gifts", async () => {
+  await run(backTo(f, "/admin/gifts"), async () => {
     const g = await api<{ name: string }>("POST", "/admin/gifts", giftBody(f)).catch(giftCheck);
     return `"${g.name}" added. It's hidden: preview it, then press Show to put it in the gift box.`;
   });
@@ -259,8 +259,24 @@ export async function createGift(f: FormData) {
 
 export async function updateGift(f: FormData) {
   const enabled = str(f, "enabled");
-  await run("/admin/gifts", async () => {
+  await run(backTo(f, "/admin/gifts"), async () => {
     const g = await api<{ name: string }>("PATCH", `/admin/gifts/${encodeURIComponent(str(f, "giftId"))}`, giftBody(f)).catch(giftCheck);
     return enabled === "true" ? `"${g.name}" is in the gift box` : enabled === "false" ? `"${g.name}" is hidden` : `"${g.name}" saved`;
+  });
+}
+
+export async function createCategory(f: FormData) {
+  await run(backTo(f, "/admin/gifts"), async () => {
+    const c = await api<{ name: string }>("POST", "/admin/gift-categories", { name: str(f, "name"), sortOrder: Number(str(f, "sortOrder") || 100) });
+    return `Category "${c.name}" added`;
+  });
+}
+
+export async function updateCategory(f: FormData) {
+  const enabled = str(f, "enabled");
+  const body = enabled ? { enabled: enabled === "true" } : { name: str(f, "name"), sortOrder: Number(str(f, "sortOrder")) };
+  await run(backTo(f, "/admin/gifts"), async () => {
+    const c = await api<{ name: string }>("PATCH", `/admin/gift-categories/${str(f, "id")}`, body);
+    return enabled === "true" ? `"${c.name}" shows in the gift box` : enabled === "false" ? `"${c.name}" is hidden, with its gifts` : `Category "${c.name}" saved`;
   });
 }
