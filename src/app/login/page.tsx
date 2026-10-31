@@ -16,8 +16,8 @@ export default async function Login({ searchParams }: PageProps<"/login">) {
   return (
     <main className="flex flex-1 items-center justify-center px-4 py-16">
       <div className="w-full max-w-sm">
-        <Link href="/" className="mx-auto flex w-fit items-center gap-2.5 text-lg font-extrabold">
-          <Image src="/logo.svg" alt="" width={40} height={40} className="rounded-xl" /> VoyaLive
+        <Link href="/" className="mx-auto flex w-fit items-center">
+          <Image src="/logo.png" alt="VoyaLive" width={170} height={56} priority />
         </Link>
         <div className="mt-8 rounded-2xl border border-line bg-surface p-6 shadow-sm">
           <h1 className="text-xl font-bold">Seller &amp; staff sign in</h1>

@@ -1,19 +1,21 @@
 @import "tailwindcss";
 
-/* VoyaLive palette, same as the app (app/src/theme.ts): bright panel screens, a night-party palette for the hero. */
+/* VoyaLive palette, same as the app (app/src/theme.ts): brand cyan, deep teal behind white text (buttons), the logo's
+   amber as accent, cool neutral greys, a deep navy for the hero. */
 :root {
-  --bg: #f7f6fc;
+  --bg: #f5f7f9;
   --surface: #ffffff;
-  --surface-high: #f0edfa;
-  --border: #e7e3f3;
-  --text: #17132e;
-  --muted: #77708f;
-  --primary: #ff3d8b;
-  --accent: #7c3aed;
+  --surface-high: #eef2f5;
+  --border: #e2e8ee;
+  --text: #0f1b2d;
+  --muted: #6b7785;
+  --primary: #08c9d9;
+  --primary-strong: #077f8c;
+  --accent: #ffb020;
   --gold: #e8920c;
   --success: #10b981;
   --danger: #ef4444;
-  --night: #120b2e;
+  --night: #070d16;
 }
 
 @theme inline {
@@ -24,6 +26,7 @@
   --color-ink: var(--text);
   --color-muted: var(--muted);
   --color-primary: var(--primary);
+  --color-primary-strong: var(--primary-strong);
   --color-accent: var(--accent);
   --color-gold: var(--gold);
   --color-success: var(--success);

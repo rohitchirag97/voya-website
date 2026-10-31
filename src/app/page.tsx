@@ -17,12 +17,15 @@ export default function Home() {
   );
 }
 
+// The wordmark logo sits on a white background, so dark sections use the mascot icon (on its white tile) and the name.
 function Logo({ light = false }: { light?: boolean }) {
-  return (
-    <span className={`flex items-center gap-2.5 text-lg font-extrabold tracking-tight ${light ? "text-white" : ""}`}>
-      <Image src="/logo.svg" alt="" width={36} height={36} className="rounded-xl" priority />
+  return light ? (
+    <span className="flex items-center gap-2.5 text-lg font-extrabold tracking-tight text-white">
+      <Image src="/icon.png" alt="" width={36} height={36} className="rounded-xl" priority />
       VoyaLive
     </span>
+  ) : (
+    <Image src="/logo.png" alt="VoyaLive" width={122} height={40} />
   );
 }
 
@@ -51,7 +54,7 @@ function Hero() {
           <h1 className="mt-5 text-4xl font-extrabold leading-[1.05] tracking-tight sm:text-6xl">
             Pull up a seat.
             <br />
-            <span className="bg-linear-to-r from-primary to-[#b98cff] bg-clip-text text-transparent">The party talks back.</span>
+            <span className="bg-linear-to-r from-primary to-accent bg-clip-text text-transparent">The party talks back.</span>
           </h1>
           <p className="mt-5 max-w-lg text-lg text-white/70">
             VoyaLive is live voice rooms with real people. Take the mic, cheer on a streamer, send a gift that fills the screen, or join a round of Greedy between songs.
@@ -92,7 +95,7 @@ function RoomPreview() {
       <div className="absolute inset-0 rounded-[2.5rem] border border-white/10 bg-white/4 backdrop-blur-sm" />
       <div className="absolute left-6 right-6 top-5 flex items-center justify-between text-xs text-white/70">
         <span className="font-bold text-white">🎶 Late night chai</span>
-        <span className="rounded-full bg-primary/90 px-2 py-0.5 font-bold text-white">LIVE · 128</span>
+        <span className="rounded-full bg-primary-strong px-2 py-0.5 font-bold text-white">LIVE · 128</span>
       </div>
       {/* host */}
       <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-center">

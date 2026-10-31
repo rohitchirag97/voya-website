@@ -3,11 +3,13 @@ import type { ReactNode } from "react";
 // Small server-rendered building blocks for the panel. No client JS.
 
 export const fmt = (n: number) => n.toLocaleString("en-IN");
+// A date and time in India time, e.g. "31 Oct 2026, 7:00 pm".
+export const ist = (iso: string) => new Date(iso).toLocaleString("en-IN", { timeZone: "Asia/Kolkata", dateStyle: "medium", timeStyle: "short" });
 
 export const input =
   "h-10 rounded-lg border border-line bg-surface px-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 placeholder:text-muted";
 export const button =
-  "h-10 rounded-lg bg-primary px-4 text-sm font-semibold text-white hover:brightness-110 active:brightness-95 disabled:opacity-50 cursor-pointer whitespace-nowrap";
+  "h-10 rounded-lg bg-primary-strong px-4 text-sm font-semibold text-white hover:brightness-110 active:brightness-95 disabled:opacity-50 cursor-pointer whitespace-nowrap";
 export const ghost = "h-10 rounded-lg border border-line bg-surface px-4 text-sm font-semibold hover:bg-surface-high cursor-pointer whitespace-nowrap";
 export const danger = "h-10 rounded-lg border border-danger/30 px-4 text-sm font-semibold text-danger hover:bg-danger/5 cursor-pointer whitespace-nowrap";
 
@@ -36,7 +38,7 @@ export const Hidden = ({ name, value }: { name: string; value: string }) => <inp
 export function Pill({ children, tone = "muted" }: { children: ReactNode; tone?: "muted" | "primary" | "gold" | "success" | "danger" }) {
   const tones = {
     muted: "bg-surface-high text-muted",
-    primary: "bg-primary/10 text-primary",
+    primary: "bg-primary/10 text-primary-strong",
     gold: "bg-gold/10 text-gold",
     success: "bg-success/10 text-success",
     danger: "bg-danger/10 text-danger",

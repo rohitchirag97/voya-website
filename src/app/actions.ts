@@ -23,10 +23,12 @@ const withMsg = (path: string, key: "ok" | "error", msg: string) => {
 };
 
 // Runs an API call and returns to the page with a success or error message. redirect() must stay outside the try.
-async function run(back: string, fn: () => Promise<string>) {
+// `next`: where to go on success when it isn't `back` (decided by the call, e.g. a page for what it just created).
+async function run(back: string, fn: () => Promise<string>, next?: () => string) {
   let to: string;
   try {
-    to = withMsg(back, "ok", await fn());
+    const msg = await fn();
+    to = withMsg(next?.() ?? back, "ok", msg);
   } catch (e) {
     if (!(e instanceof ApiError)) throw e;
     if (e.status === 401) redirect("/login");
@@ -278,5 +280,139 @@ export async function updateCategory(f: FormData) {
   await run(backTo(f, "/admin/gifts"), async () => {
     const c = await api<{ name: string }>("PATCH", `/admin/gift-categories/${str(f, "id")}`, body);
     return enabled === "true" ? `"${c.name}" shows in the gift box` : enabled === "false" ? `"${c.name}" is hidden, with its gifts` : `Category "${c.name}" saved`;
+  });
+}
+
+// ---------- events ----------
+
+type EventReward = { coins?: number; badgeId?: string; badgeDays?: number | null };
+type EventConfig = {
+  page: { headerUrl: string | null; color: string; description: string; rules: string };
+  boards: { id: string; title: string; metric: string; eventGiftsOnly: boolean; size: number; rewards: (EventReward & { from: number; to: number })[] }[];
+  tasks: { id: string; title: string; metric: string; eventGiftsOnly: boolean; target: number; daily: boolean; reward: EventReward }[];
+};
+type AdminEvent = { id: string; title: string; config: EventConfig };
+
+// Times are typed in India time (datetime-local has no zone).
+const istDate = (f: FormData, k: string) => (str(f, k) ? new Date(`${str(f, k)}:00+05:30`).toISOString() : undefined);
+const num = (f: FormData, k: string) => Number(str(f, k).replace(/[, ]/g, "") || 0);
+const rewardOf = (f: FormData, prefix: string): EventReward => ({
+  ...(num(f, `${prefix}coins`) ? { coins: num(f, `${prefix}coins`) } : {}),
+  ...(str(f, `${prefix}badge`) ? { badgeId: str(f, `${prefix}badge`), badgeDays: num(f, `${prefix}days`) || null } : {}),
+});
+const eventPath = (id: string) => `/admin/events/${encodeURIComponent(id)}`;
+// Read-change-write the event's settings (boards and tasks live inside them).
+async function changeConfig(id: string, change: (c: EventConfig) => EventConfig) {
+  const e = await api<AdminEvent>("GET", eventPath(id));
+  await api("PATCH", eventPath(id), { config: change(e.config) });
+}
+
+export async function createEvent(f: FormData) {
+  let to = "/admin/events";
+  await run("/admin/events", async () => {
+    const e = await api<AdminEvent>("POST", "/admin/events", {
+      title: str(f, "title"),
+      startsAt: istDate(f, "startsAt"),
+      endsAt: istDate(f, "endsAt"),
+      published: false,
+      bannerHome: true,
+      bannerRoom: true,
+      sortOrder: 0,
+      giftCategoryId: null,
+      config: { page: { headerUrl: null, color: "#08C9D9", description: "", rules: "" }, boards: [], tasks: [] },
+    });
+    to = eventPath(e.id);
+    return `"${e.title}" created as a draft. Add its banner, page, leaderboards and tasks, then publish it.`;
+  }, () => to);
+}
+
+export async function saveEventBasics(f: FormData) {
+  const id = str(f, "id");
+  await run(eventPath(id), async () => {
+    const e = await api<AdminEvent>("GET", eventPath(id));
+    await api("PATCH", eventPath(id), {
+      title: str(f, "title"),
+      startsAt: istDate(f, "startsAt"),
+      endsAt: istDate(f, "endsAt"),
+      published: f.get("published") === "on",
+      bannerHome: f.get("bannerHome") === "on",
+      bannerRoom: f.get("bannerRoom") === "on",
+      sortOrder: num(f, "sortOrder"),
+      giftCategoryId: str(f, "giftCategoryId") ? num(f, "giftCategoryId") : null,
+      config: { ...e.config, page: { ...e.config.page, color: str(f, "color") || "#08C9D9", description: str(f, "description"), rules: str(f, "rules") } },
+    });
+    return "Event saved";
+  });
+}
+
+export async function uploadEventImage(f: FormData) {
+  const id = str(f, "id");
+  const slot = str(f, "slot") === "header" ? "header" : "banner";
+  const file = f.get("file");
+  await run(eventPath(id), async () => {
+    const body = new FormData();
+    if (file instanceof File && file.size) body.append("file", file);
+    await api("POST", `${eventPath(id)}/${slot}`, body);
+    return slot === "banner" ? "Banner updated" : "Page header updated";
+  });
+}
+
+export async function saveEventBoard(f: FormData) {
+  const id = str(f, "id");
+  const index = str(f, "index");
+  await run(eventPath(id), async () => {
+    const rewards = [0, 1, 2, 3, 4]
+      .map((i) => ({ from: num(f, `r${i}from`), to: num(f, `r${i}to`) || num(f, `r${i}from`), ...rewardOf(f, `r${i}`) }))
+      .filter((r) => r.from > 0 && (r.coins || r.badgeId));
+    await changeConfig(id, (c) => {
+      const board = {
+        id: index === "" ? "" : c.boards[Number(index)]!.id,
+        title: str(f, "title"),
+        metric: str(f, "metric"),
+        eventGiftsOnly: f.get("eventGiftsOnly") === "on",
+        size: num(f, "size") || 10,
+        rewards,
+      };
+      return { ...c, boards: index === "" ? [...c.boards, board] : c.boards.map((b, i) => (i === Number(index) ? board : b)) };
+    });
+    return "Leaderboard saved";
+  });
+}
+
+export async function saveEventTask(f: FormData) {
+  const id = str(f, "id");
+  const index = str(f, "index");
+  await run(eventPath(id), async () => {
+    await changeConfig(id, (c) => {
+      const task = {
+        id: index === "" ? "" : c.tasks[Number(index)]!.id,
+        title: str(f, "title"),
+        metric: str(f, "metric"),
+        eventGiftsOnly: f.get("eventGiftsOnly") === "on",
+        target: num(f, "target"),
+        daily: f.get("daily") === "on",
+        reward: rewardOf(f, ""),
+      };
+      return { ...c, tasks: index === "" ? [...c.tasks, task] : c.tasks.map((t, i) => (i === Number(index) ? task : t)) };
+    });
+    return "Task saved";
+  });
+}
+
+export async function removeEventPart(f: FormData) {
+  const id = str(f, "id");
+  const kind = str(f, "kind") === "task" ? "tasks" : "boards";
+  const index = Number(str(f, "index"));
+  await run(eventPath(id), async () => {
+    await changeConfig(id, (c) => ({ ...c, [kind]: (c[kind] as unknown[]).filter((_, i) => i !== index) }));
+    return kind === "tasks" ? "Task removed" : "Leaderboard removed";
+  });
+}
+
+export async function approveEventPayouts(f: FormData) {
+  const id = str(f, "id");
+  await run(eventPath(id), async () => {
+    const r = await api<{ paid: number; badgeFailures: string[] }>("POST", `${eventPath(id)}/payouts/approve`);
+    return `${r.paid} ${r.paid === 1 ? "reward" : "rewards"} paid${r.badgeFailures.length ? `. Badges failed for: ${r.badgeFailures.join(", ")}` : ""}`;
   });
 }

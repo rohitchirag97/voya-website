@@ -15,6 +15,7 @@ export default async function PanelLayout({ children }: LayoutProps<"/">) {
           { href: "/admin/sellers", label: "Coin sellers" },
           { href: "/admin/agencies", label: "Agencies" },
           { href: "/admin/gifts", label: "Gifts" },
+          { href: "/admin/events", label: "Events" },
           { href: "/admin/salaries", label: "Salaries" },
           { href: "/admin/withdrawals", label: "Withdrawals" },
         ]
@@ -26,8 +27,8 @@ export default async function PanelLayout({ children }: LayoutProps<"/">) {
     <>
       <header className="border-b border-line bg-surface">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-6 gap-y-3 px-4 py-3 sm:px-6">
-          <Link href="/dashboard" className="flex items-center gap-2 font-extrabold">
-            <Image src="/logo.svg" alt="" width={32} height={32} className="rounded-lg" /> VoyaLive
+          <Link href="/dashboard" className="flex items-center">
+            <Image src="/logo.png" alt="VoyaLive" width={110} height={36} priority />
           </Link>
           <nav className="flex flex-wrap gap-1 text-sm font-semibold">
             {links.map((l) => (
