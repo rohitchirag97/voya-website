@@ -32,8 +32,8 @@ const url = (p: string) => (/^(https?|data):/.test(p) ? p : "/" + p.replace(/^\/
 export const pictureOf = (svg?: string | null) => svg?.match(/href="([^"]+)"/)?.[1] ?? null;
 
 export function ArtPreview({
-  svga,
-  image,
+  svga: animOrPicture,
+  image: picture,
   svg,
   bubble,
   wide,
@@ -46,6 +46,10 @@ export function ArtPreview({
   wide?: boolean; // profile cards: a wide picture
   label: string;
 }) {
+  // An effect uploaded as a picture (gifts, entry effects) is shown as a picture.
+  const still = !!animOrPicture && /\.(png|webp|jpe?g)$/i.test(animOrPicture);
+  const svga = still ? null : animOrPicture;
+  const image = still ? animOrPicture : picture;
   const [open, setOpen] = useState(false);
   const [failed, setFailed] = useState(false);
   const stage = useRef<HTMLDivElement>(null);

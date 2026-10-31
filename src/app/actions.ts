@@ -474,10 +474,8 @@ const itemBody = (f: FormData, editing: boolean) => {
   body.append("forPrize", f.get("forPrize") === "on" ? "true" : "false");
   body.append("forMall", f.get("forMall") === "on" ? "true" : "false");
   body.append("internal", f.get("internal") === "on" ? "true" : "false");
-  for (const k of ["image", "svga"]) {
-    const file = f.get(k);
-    if (file instanceof File && file.size) body.append(k, file);
-  }
+  // The artwork box (SVGA, PNG or WebP; one or two files): the API sorts out which is which.
+  for (const file of f.getAll("art")) if (file instanceof File && file.size) body.append("art", file);
   return body;
 };
 const KIND_NAME: Record<string, string> = { BADGE: "Badge", AVATAR_FRAME: "Frame", CARD_DECOR: "Profile card", CHAT_BUBBLE: "Chat bubble", ENTRY_EFFECT: "Entry effect" };

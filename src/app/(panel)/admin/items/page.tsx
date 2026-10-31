@@ -135,16 +135,10 @@ function ItemForm({ kind, item }: { kind: Kind; item?: Item }) {
           ))}
         </div>
       )}
-      {kind !== "ENTRY_EFFECT" && (
-        <Field label={item ? "Replace picture (PNG/WebP, max 2 MB)" : `Picture (PNG/WebP, max 2 MB)${kind === "CHAT_BUBBLE" ? ", optional" : ""}`}>
-          <input name="image" type="file" accept="image/png,image/webp" className="text-sm" />
-        </Field>
-      )}
-      {kind !== "CHAT_BUBBLE" && kind !== "CARD_DECOR" && (
-        <Field label={item ? "Replace animation (SVGA, max 15 MB)" : `Animation (SVGA, max 15 MB)${kind === "ENTRY_EFFECT" ? "" : ", optional"}`}>
-          <input name="svga" type="file" accept=".svga" required={!item && kind === "ENTRY_EFFECT"} className="text-sm" />
-        </Field>
-      )}
+      <Field label={`${item ? "Replace artwork" : "Artwork"}: SVGA, PNG or WebP${kind === "CHAT_BUBBLE" ? " (optional corner art)" : ""}`}>
+        <input name="art" type="file" multiple accept=".svga,image/png,image/webp,image/jpeg" required={!item && kind !== "CHAT_BUBBLE"} className="text-sm" />
+        <span className="text-xs font-normal text-muted">One file, or a picture and an SVGA together (the picture is shown where animations can&apos;t play). Pictures up to 2 MB, SVGA up to 15 MB.</span>
+      </Field>
       <div className="flex flex-wrap items-center gap-4 text-sm font-semibold sm:col-span-2">
         <label className="flex items-center gap-2">
           <input type="checkbox" name="forPrize" defaultChecked={item ? item.forPrize : true} className="h-4 w-4 accent-primary-strong" /> Event prize

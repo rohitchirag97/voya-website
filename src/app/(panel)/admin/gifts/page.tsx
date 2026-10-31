@@ -126,11 +126,11 @@ export default async function Gifts({ searchParams }: PageProps<"/admin/gifts">)
             <Field label="Position (lower shows first)">
               <input name="sortOrder" inputMode="numeric" pattern="[0-9]+" defaultValue="100" className={input} />
             </Field>
-            <Field label="Icon (PNG/WebP, max 1 MB)">
-              <input name="icon" type="file" required accept="image/png,image/webp" className="text-sm" />
+            <Field label="Icon in the gift box: PNG or WebP (max 1 MB)">
+              <input name="icon" type="file" required accept=".svga,image/png,image/webp,image/jpeg" className="text-sm" />
             </Field>
-            <Field label="Animation (SVGA 2.x, max 15 MB)">
-              <input name="effect" type="file" accept=".svga" className="text-sm" />
+            <Field label="Effect when sent: SVGA, PNG or WebP (max 15 MB)">
+              <input name="effect" type="file" accept=".svga,image/png,image/webp,image/jpeg" className="text-sm" />
             </Field>
             <div className="flex items-end">
               <button className={button}>Add gift</button>
@@ -222,11 +222,11 @@ export default async function Gifts({ searchParams }: PageProps<"/admin/gifts">)
                 <Field label="Position">
                   <input name="sortOrder" required inputMode="numeric" pattern="[0-9]+" defaultValue={g.sortOrder} className={input} />
                 </Field>
-                <Field label="Replace icon">
-                  <input name="icon" type="file" accept="image/png,image/webp" className="text-sm" />
+                <Field label="Replace icon (PNG/WebP)">
+                  <input name="icon" type="file" accept=".svga,image/png,image/webp,image/jpeg" className="text-sm" />
                 </Field>
-                <Field label={g.effect ? "Replace animation" : "Add animation"}>
-                  <input name="effect" type="file" accept=".svga" className="text-sm" />
+                <Field label={`${g.effect ? "Replace" : "Add"} effect (SVGA, PNG or WebP)`}>
+                  <input name="effect" type="file" accept=".svga,image/png,image/webp,image/jpeg" className="text-sm" />
                 </Field>
                 <div className="flex items-end">
                   <button className={ghost}>Save changes</button>

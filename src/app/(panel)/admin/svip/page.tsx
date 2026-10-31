@@ -161,14 +161,9 @@ function SvipItemForm({ kind, item }: { kind: Item["kind"]; item?: Item }) {
           ))}
         </div>
       )}
-      <Field label={`${item ? "Replace picture" : "Picture"} (PNG/WebP, max 2 MB)${kind === "AVATAR_FRAME" || kind === "CHAT_BUBBLE" ? ", optional" : ""}`}>
-        <input name="image" type="file" accept="image/png,image/webp" required={!item && kind === "CARD_DECOR"} className="text-sm" />
+      <Field label={`${item ? "Replace artwork" : "Artwork"}: SVGA, PNG or WebP${kind === "CHAT_BUBBLE" ? " (optional corner art)" : ""}`}>
+        <input name="art" type="file" multiple accept=".svga,image/png,image/webp,image/jpeg" required={!item && kind !== "CHAT_BUBBLE"} className="text-sm" />
       </Field>
-      {kind === "AVATAR_FRAME" && (
-        <Field label={`${item ? "Replace animation" : "Animation"} (SVGA, max 15 MB)`}>
-          <input name="svga" type="file" accept=".svga" className="text-sm" />
-        </Field>
-      )}
       <div className="flex flex-wrap items-center gap-4 text-sm font-semibold sm:col-span-2">
         {item && (
           <label className="flex items-center gap-2">
@@ -179,7 +174,7 @@ function SvipItemForm({ kind, item }: { kind: Item["kind"]; item?: Item }) {
       </div>
       {item && (
         <p className="text-xs text-muted sm:col-span-2">
-          Leave a file empty to keep the current picture or animation.
+          Leave the artwork empty to keep the current one.
         </p>
       )}
     </form>
