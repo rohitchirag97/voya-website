@@ -337,6 +337,7 @@ export async function saveEventBasics(f: FormData) {
       published: f.get("published") === "on",
       bannerHome: f.get("bannerHome") === "on",
       bannerRoom: f.get("bannerRoom") === "on",
+      homeTab: str(f, "homeTab") || "BOTH",
       sortOrder: num(f, "sortOrder"),
       giftCategoryId: str(f, "giftCategoryId") ? num(f, "giftCategoryId") : null,
       config: { ...e.config, page: { ...e.config.page, color: str(f, "color") || "#08C9D9", description: str(f, "description"), rules: str(f, "rules") } },
@@ -414,5 +415,55 @@ export async function approveEventPayouts(f: FormData) {
   await run(eventPath(id), async () => {
     const r = await api<{ paid: number; badgeFailures: string[] }>("POST", `${eventPath(id)}/payouts/approve`);
     return `${r.paid} ${r.paid === 1 ? "reward" : "rewards"} paid${r.badgeFailures.length ? `. Badges failed for: ${r.badgeFailures.join(", ")}` : ""}`;
+  });
+}
+
+// ---------- notices ----------
+
+const NOTICES = "/admin/notices";
+const noticeBody = (f: FormData) => ({
+  title: str(f, "title"),
+  body: String(f.get("body") ?? "").trim(),
+  color: str(f, "color") || "#08C9D9",
+  startsAt: istDate(f, "startsAt"),
+  endsAt: istDate(f, "endsAt"),
+  published: f.get("published") === "on",
+  inInbox: f.get("inInbox") === "on",
+  homeTab: str(f, "homeTab") || "BOTH",
+  sortOrder: num(f, "sortOrder"),
+});
+
+export async function createNotice(f: FormData) {
+  const file = f.get("file");
+  await run(NOTICES, async () => {
+    const n = await api<{ id: string; title: string }>("POST", NOTICES, noticeBody(f));
+    if (file instanceof File && file.size) {
+      const body = new FormData();
+      body.append("file", file);
+      await api("POST", `${NOTICES}/${n.id}/image`, body);
+    }
+    return `"${n.title}" saved${f.get("published") === "on" ? " and published" : " as a draft"}`;
+  });
+}
+
+export async function updateNotice(f: FormData) {
+  const id = encodeURIComponent(str(f, "id"));
+  const file = f.get("file");
+  await run(NOTICES, async () => {
+    await api("PATCH", `${NOTICES}/${id}`, noticeBody(f));
+    if ((file instanceof File && file.size) || f.get("removeImage") === "on") {
+      const body = new FormData();
+      if (f.get("removeImage") === "on") body.append("remove", "1");
+      else body.append("file", file as File);
+      await api("POST", `${NOTICES}/${id}/image`, body);
+    }
+    return "Notice saved";
+  });
+}
+
+export async function deleteNotice(f: FormData) {
+  await run(NOTICES, async () => {
+    await api("DELETE", `${NOTICES}/${encodeURIComponent(str(f, "id"))}`);
+    return "Notice deleted";
   });
 }

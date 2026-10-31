@@ -16,6 +16,7 @@ export default async function PanelLayout({ children }: LayoutProps<"/">) {
           { href: "/admin/agencies", label: "Agencies" },
           { href: "/admin/gifts", label: "Gifts" },
           { href: "/admin/events", label: "Events" },
+          ...(me.staffRole === "OWNER" || me.staffRole === "ADMIN" ? [{ href: "/admin/notices", label: "Notices" }] : []),
           { href: "/admin/salaries", label: "Salaries" },
           { href: "/admin/withdrawals", label: "Withdrawals" },
         ]

@@ -17,6 +17,7 @@ type Event = {
   bannerUrl: string | null;
   bannerHome: boolean;
   bannerRoom: boolean;
+  homeTab: "BOTH" | "LIVE" | "ROOMS";
   sortOrder: number;
   giftCategoryId: number | null;
   paidOutAt: string | null;
@@ -99,6 +100,13 @@ export default async function EventEditor({ params, searchParams }: PageProps<"/
               </Field>
               <Field label="Banner order (lower first)">
                 <input name="sortOrder" inputMode="numeric" pattern="[0-9]+" defaultValue={e.sortOrder} className={input} />
+              </Field>
+              <Field label="Home banner shows on">
+                <select name="homeTab" defaultValue={e.homeTab} className={input}>
+                  <option value="BOTH">Live and Rooms tabs</option>
+                  <option value="LIVE">Live tab only</option>
+                  <option value="ROOMS">Rooms tab only</option>
+                </select>
               </Field>
               <Field label="Description" wide>
                 <textarea name="description" maxLength={2000} rows={3} defaultValue={c.page.description} className={`${input} h-auto py-2`} />
