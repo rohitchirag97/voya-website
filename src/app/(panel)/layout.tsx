@@ -23,7 +23,7 @@ export default async function PanelLayout({ children }: LayoutProps<"/">) {
               { href: "/admin/gifts", label: "Gifts", icon: "gift" as const },
               { href: "/admin/events", label: "Events", icon: "trophy" as const },
               { href: "/admin/notices", label: "Notices", icon: "megaphone" as const },
-              { href: "/admin/items", label: "Prize items", icon: "gift" as const },
+              { href: "/admin/items", label: "Items", icon: "gift" as const },
             ],
           },
           {
@@ -31,6 +31,7 @@ export default async function PanelLayout({ children }: LayoutProps<"/">) {
             links: [
               { href: "/admin/salaries", label: "Salaries", icon: "salary" as const },
               { href: "/admin/withdrawals", label: "Withdrawals", icon: "withdraw" as const },
+              ...(me.staffRole === "OWNER" ? [{ href: "/admin/grants", label: "Give to user", icon: "coins" as const }] : []),
             ],
           },
         ]

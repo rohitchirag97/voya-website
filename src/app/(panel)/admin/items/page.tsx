@@ -4,7 +4,7 @@ import { button, Card, Flash, ghost, Hidden, input, Pill } from "@/components/ui
 import { api, isStaff, requireMe } from "@/lib/api";
 import { createItem, updateItem } from "../../../actions";
 
-type Kind = "BADGE" | "AVATAR_FRAME" | "CHAT_BUBBLE" | "ENTRY_EFFECT";
+type Kind = "BADGE" | "AVATAR_FRAME" | "CARD_DECOR" | "CHAT_BUBBLE" | "ENTRY_EFFECT";
 type Item = {
   kind: Kind;
   id: string;
@@ -14,20 +14,22 @@ type Item = {
   svga: string | null;
   style: { gradient: string[]; border: string; text: string } | null;
   enabled: boolean;
-  exclusive: boolean;
+  forPrize: boolean;
+  forMall: boolean;
 };
 
 const KINDS: { kind: Kind; title: string; hint: string }[] = [
   { kind: "BADGE", title: "Badges", hint: "Shown on profiles. A square PNG/WebP (about 200 × 200), or an animated SVGA." },
   { kind: "AVATAR_FRAME", title: "Avatar frames", hint: "Worn around the profile picture. Square PNG/WebP (about 400 × 400) with a clear middle (the photo fills the centre 70%), or an animated SVGA." },
+  { kind: "CARD_DECOR", title: "Profile card decorations", hint: "The picture behind the profile card. Wide PNG/WebP, about 1000 × 400." },
   { kind: "CHAT_BUBBLE", title: "Chat bubbles", hint: "Pick the bubble's colours. Optional: a small corner picture (PNG/WebP, about 88 × 52)." },
   { kind: "ENTRY_EFFECT", title: "Entry effects", hint: "An SVGA animation that plays when the owner enters a room." },
 ];
 // The picture inside an uploaded item's SVG (older built-in items are drawn SVG and show as "drawn").
 const picture = (svg: string) => svg.match(/href="([^"]+)"/)?.[1] ?? null;
 
-// Prize items for events: made here, given only as event prizes, worn only by their winners (for the days the prize
-// says). Owner and Admin only.
+// Every item made here: an event prize (events pick from these) and/or a Mall item (sold once the Mall opens; hidden
+// until then). Only people who own one can wear it: won, given (Give to user), or bought. Owner and Admin only.
 export default async function Items({ searchParams }: PageProps<"/admin/items">) {
   const me = await requireMe();
   if (!isStaff(me)) redirect("/dashboard");
@@ -38,12 +40,12 @@ export default async function Items({ searchParams }: PageProps<"/admin/items">)
     <>
       <div>
         <h1 className="text-2xl font-extrabold">Items</h1>
-        <p className="mt-1 text-sm text-muted">Badges, frames, chat bubbles and entry effects to give as event prizes. Add them to a prize in an event&apos;s leaderboards or tasks.</p>
+        <p className="mt-1 text-sm text-muted">Badges, frames, profile cards, chat bubbles and entry effects. Tick Event prize to use one in events, Mall item to sell it once the Mall opens.</p>
       </div>
       <Flash ok={sp.ok} error={sp.error} />
 
       {KINDS.map(({ kind, title, hint }) => {
-        const list = items.filter((i) => i.kind === kind && (kind === "BADGE" || i.exclusive));
+        const list = items.filter((i) => i.kind === kind);
         return (
           <Card key={kind} title={title} hint={hint}>
             <details className="mb-4 rounded-xl border border-dashed border-line">
@@ -64,7 +66,11 @@ export default async function Items({ searchParams }: PageProps<"/admin/items">)
                         <span className="block truncate font-semibold">{i.name}</span>
                         {i.description && <span className="block truncate text-xs text-muted">{i.description}</span>}
                       </span>
-                      {!i.enabled && <Pill>hidden</Pill>}
+                      <span className="flex flex-col items-end gap-1">
+                        {i.forPrize && <Pill tone="gold">Event prize</Pill>}
+                        {i.forMall && <Pill tone="primary">Mall</Pill>}
+                        {!i.enabled && <Pill>hidden</Pill>}
+                      </span>
                     </div>
                     {i.svga && (
                       <details className="mt-2">
@@ -99,7 +105,7 @@ function Thumb({ item }: { item: Item }) {
     );
   if (src)
     // eslint-disable-next-line @next/next/no-img-element -- served by the API
-    return <img src={src} alt="" className="h-12 w-12 rounded-lg bg-surface-high object-contain" />;
+    return <img src={src} alt="" className={`h-12 rounded-lg bg-surface-high ${item.kind === "CARD_DECOR" ? "w-28 object-cover" : "w-12 object-contain"}`} />;
   return <span className="flex h-12 w-12 items-center justify-center rounded-lg bg-night text-[10px] font-bold text-white">{item.svga ? "SVGA" : "drawn"}</span>;
 }
 
@@ -139,12 +145,18 @@ function ItemForm({ kind, item }: { kind: Kind; item?: Item }) {
           <input name="image" type="file" accept="image/png,image/webp" className="text-sm" />
         </Field>
       )}
-      {kind !== "CHAT_BUBBLE" && (
+      {kind !== "CHAT_BUBBLE" && kind !== "CARD_DECOR" && (
         <Field label={item ? "Replace animation (SVGA, max 15 MB)" : `Animation (SVGA, max 15 MB)${kind === "ENTRY_EFFECT" ? "" : ", optional"}`}>
           <input name="svga" type="file" accept=".svga" required={!item && kind === "ENTRY_EFFECT"} className="text-sm" />
         </Field>
       )}
       <div className="flex flex-wrap items-center gap-4 text-sm font-semibold sm:col-span-2">
+        <label className="flex items-center gap-2">
+          <input type="checkbox" name="forPrize" defaultChecked={item ? item.forPrize : true} className="h-4 w-4 accent-primary-strong" /> Event prize
+        </label>
+        <label className="flex items-center gap-2">
+          <input type="checkbox" name="forMall" defaultChecked={item?.forMall ?? false} className="h-4 w-4 accent-primary-strong" /> Mall item
+        </label>
         {item && (
           <label className="flex items-center gap-2">
             <input type="checkbox" name="enabled" defaultChecked={item.enabled} className="h-4 w-4 accent-primary-strong" /> Shown (unticked: hidden everywhere)

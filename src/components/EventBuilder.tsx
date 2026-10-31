@@ -30,6 +30,7 @@ const REWARD_CHIPS: Chip[] = [
   { key: "COINS", label: "Coins", tone: "bg-amber-100 text-amber-800 border-amber-300", make: () => ({ type: "COINS", amount: 1000 }) },
   { key: "BADGE", label: "Badge", tone: "bg-violet-100 text-violet-800 border-violet-300", make: (i) => (firstOf(i, "BADGE") ? { type: "BADGE", id: firstOf(i, "BADGE")!, days: 30 } : null) },
   { key: "AVATAR_FRAME", label: "Frame", tone: "bg-cyan-100 text-cyan-800 border-cyan-300", make: (i) => (firstOf(i, "AVATAR_FRAME") ? { type: "ITEM", id: firstOf(i, "AVATAR_FRAME")!, days: 30 } : null) },
+  { key: "CARD_DECOR", label: "Profile card", tone: "bg-indigo-100 text-indigo-800 border-indigo-300", make: (i) => (firstOf(i, "CARD_DECOR") ? { type: "ITEM", id: firstOf(i, "CARD_DECOR")!, days: 30 } : null) },
   { key: "CHAT_BUBBLE", label: "Chat bubble", tone: "bg-sky-100 text-sky-800 border-sky-300", make: (i) => (firstOf(i, "CHAT_BUBBLE") ? { type: "ITEM", id: firstOf(i, "CHAT_BUBBLE")!, days: 30 } : null) },
   { key: "ENTRY_EFFECT", label: "Entry effect", tone: "bg-rose-100 text-rose-800 border-rose-300", make: (i) => (firstOf(i, "ENTRY_EFFECT") ? { type: "ITEM", id: firstOf(i, "ENTRY_EFFECT")!, days: 30 } : null) },
   { key: "SPECIAL_ID", label: "Special ID", tone: "bg-emerald-100 text-emerald-800 border-emerald-300", make: () => ({ type: "SPECIAL_ID", days: null }) },
@@ -422,5 +423,71 @@ function FilterEditor({ f, categories, onChange }: { f: Filter; categories: { id
         </label>
       ))}
     </>
+  );
+}
+
+// Reward items for one person (Give to user): the same tray and item cards, as a hidden "items" field.
+export function RewardItemsField({ items }: { items: ItemOption[] }) {
+  const [list, setList] = useState<RewardItem[]>([]);
+  const [over, setOver] = useState(false);
+  const add = (key: string) => {
+    const r = REWARD_CHIPS.find((c) => c.key === key)?.make(items);
+    if (r) setList((l) => [...l, r]);
+  };
+  return (
+    <div className="space-y-3">
+      <input type="hidden" name="items" value={JSON.stringify(list)} />
+      <div className="rounded-xl border border-line bg-surface p-3">
+        <p className="text-xs font-semibold text-muted">Drag what to give into the box below, or tap it</p>
+        <div className="mt-2 flex flex-wrap gap-2">
+          {REWARD_CHIPS.map((c) => {
+            const ok = !!c.make(items);
+            return (
+              <button
+                key={c.key}
+                type="button"
+                disabled={!ok}
+                draggable={ok}
+                onDragStart={(e) => drag(e, "reward", c.key)}
+                onClick={() => add(c.key)}
+                title={ok ? undefined : `Create a ${c.label.toLowerCase()} in Items first`}
+                className={`rounded-full border px-3 py-1 text-xs font-bold ${ok ? `${c.tone} cursor-grab active:cursor-grabbing` : "border-line bg-surface-high text-muted opacity-60"}`}
+              >
+                + {c.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+      <div
+        onDragOver={(e) => {
+          e.preventDefault();
+          setOver(true);
+        }}
+        onDragLeave={() => setOver(false)}
+        onDrop={(e) => {
+          e.preventDefault();
+          setOver(false);
+          const key = dropped(e, "reward");
+          if (key) add(key);
+        }}
+        className={`rounded-xl border-2 p-3 ${over ? "border-primary bg-primary/5" : "border-line bg-surface"}`}
+      >
+        {list.length === 0 ? (
+          <p className="rounded-lg border border-dashed border-line px-3 py-6 text-center text-sm text-muted">Drop items here</p>
+        ) : (
+          <ul className="space-y-2">
+            {list.map((r, j) => (
+              <li key={j} className="flex flex-wrap items-center gap-2 rounded-lg bg-surface-high px-3 py-2 text-sm">
+                <RewardEditor r={r} items={items} onChange={(nr) => setList((l) => l.map((x, k) => (k === j ? nr : x)))} />
+                <button type="button" aria-label="Remove" onClick={() => setList((l) => l.filter((_, k) => k !== j))} className="ml-auto rounded px-2 text-muted hover:text-danger">
+                  ✕
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </div>
   );
 }

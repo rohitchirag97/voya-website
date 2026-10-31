@@ -471,19 +471,21 @@ const itemBody = (f: FormData, editing: boolean) => {
   const body = new FormData();
   for (const k of ["name", "description", "from", "to", "border", "text"]) if (str(f, k)) body.append(k, str(f, k));
   if (editing) body.append("enabled", f.get("enabled") === "on" ? "true" : "false");
+  body.append("forPrize", f.get("forPrize") === "on" ? "true" : "false");
+  body.append("forMall", f.get("forMall") === "on" ? "true" : "false");
   for (const k of ["image", "svga"]) {
     const file = f.get(k);
     if (file instanceof File && file.size) body.append(k, file);
   }
   return body;
 };
-const KIND_NAME: Record<string, string> = { BADGE: "Badge", AVATAR_FRAME: "Frame", CHAT_BUBBLE: "Chat bubble", ENTRY_EFFECT: "Entry effect" };
+const KIND_NAME: Record<string, string> = { BADGE: "Badge", AVATAR_FRAME: "Frame", CARD_DECOR: "Profile card", CHAT_BUBBLE: "Chat bubble", ENTRY_EFFECT: "Entry effect" };
 
 export async function createItem(f: FormData) {
   const kind = str(f, "kind");
   await run(ITEMS, async () => {
     await api("POST", `${ITEMS}/${encodeURIComponent(kind)}`, itemBody(f, false));
-    return `${KIND_NAME[kind] ?? "Item"} "${str(f, "name")}" added. Add it to a prize in an event.`;
+    return `${KIND_NAME[kind] ?? "Item"} "${str(f, "name")}" added.`;
   });
 }
 
@@ -492,5 +494,20 @@ export async function updateItem(f: FormData) {
   await run(ITEMS, async () => {
     await api("PATCH", `${ITEMS}/${encodeURIComponent(kind)}/${encodeURIComponent(str(f, "itemId"))}`, itemBody(f, true));
     return `"${str(f, "name")}" saved`;
+  });
+}
+
+// ---------- give to user (owner) ----------
+
+export async function giveToUser(f: FormData) {
+  await run("/admin/grants", async () => {
+    let items: unknown;
+    try {
+      items = JSON.parse(String(f.get("items") ?? "[]"));
+    } catch {
+      items = [];
+    }
+    const r = await api<{ user: { name: string | null }; failures: string[] }>("POST", "/admin/grants", { user: str(f, "user"), reason: str(f, "reason"), items });
+    return `Given to ${r.user.name ?? "them"}. They got a message in their inbox.${r.failures.length ? ` Some items couldn't be given: ${r.failures.join(", ")}.` : ""}`;
   });
 }

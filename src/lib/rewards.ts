@@ -1,6 +1,6 @@
 // Event prize and filter shapes (server: db/schema.ts EventConfig), shared by the event editor and its builder.
 
-export type ItemOption = { kind: "BADGE" | "AVATAR_FRAME" | "CHAT_BUBBLE" | "ENTRY_EFFECT"; id: string; name: string; svg: string; svga: string | null };
+export type ItemOption = { kind: "BADGE" | "AVATAR_FRAME" | "CARD_DECOR" | "CHAT_BUBBLE" | "ENTRY_EFFECT"; id: string; name: string; svg: string; svga: string | null };
 export type RewardItem =
   | { type: "COINS"; amount: number }
   | { type: "BADGE"; id: string; days: number | null }
@@ -31,7 +31,7 @@ export type Part = {
 // A prize's items as text: "50,000 coins + Gold ring frame (30 days) + Special ID".
 export function rewardText(items: RewardItem[], labels: { badges: Record<string, { name: string }>; items: Record<string, { name: string; kind: string }> }) {
   const d = (n: number | null) => (n ? ` (${n} days)` : "");
-  const KIND: Record<string, string> = { AVATAR_FRAME: "frame", CHAT_BUBBLE: "chat bubble", ENTRY_EFFECT: "entry effect" };
+  const KIND: Record<string, string> = { AVATAR_FRAME: "frame", CARD_DECOR: "profile card", CHAT_BUBBLE: "chat bubble", ENTRY_EFFECT: "entry effect" };
   return (
     items
       .map((r) =>
