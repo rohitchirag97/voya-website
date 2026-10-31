@@ -1,19 +1,21 @@
 import { redirect } from "next/navigation";
+import { ArtPreview } from "@/components/ArtPreview";
 import { RewardItemsField } from "@/components/EventBuilder";
 import { button, Card, Flash, input, ist } from "@/components/ui";
-import { api, requireMe } from "@/lib/api";
+import { api, can, requireMe } from "@/lib/api";
 import { rewardText, type ItemOption, type RewardItem } from "@/lib/rewards";
 import { giveToUser } from "../../../actions";
 
 type Grant = { id: number; items: RewardItem[]; reason: string; failures: string[]; createdAt: string; userName: string | null; publicId: number; by: string | null };
 
-// Give coins and items to one person without an event (compensation, thanks, a special reward). Owner only. Every
+// Give coins and items to one person without an event (compensation, thanks, a special reward). Needs the Give to user
+// switch (the owner has it). Every
 // grant needs a reason, is logged below, and the person gets a message in their inbox.
 export default async function Grants({ searchParams }: PageProps<"/admin/grants">) {
   const me = await requireMe();
-  if (me.staffRole !== "OWNER") redirect("/dashboard");
+  if (!can(me, "grants.give")) redirect("/dashboard");
   const sp = await searchParams;
-  const [{ items }, { grants }] = await Promise.all([api<{ items: (ItemOption & { enabled: boolean })[] }>("GET", "/admin/items"), api<{ grants: Grant[] }>("GET", "/admin/grants")]);
+  const { grants, items } = await api<{ grants: Grant[]; items: (ItemOption & { enabled: boolean })[] }>("GET", "/admin/grants");
   const usable = items.filter((i) => i.enabled);
   const labels = {
     badges: Object.fromEntries(items.filter((i) => i.kind === "BADGE").map((i) => [i.id, i])),
@@ -56,6 +58,11 @@ export default async function Grants({ searchParams }: PageProps<"/admin/grants"
                   <b>{g.userName ?? "Someone"}</b> <span className="text-muted">ID {g.publicId}</span>
                 </p>
                 <p>{rewardText(g.items, labels)}</p>
+                <div className="mt-1 flex flex-wrap gap-2">
+                  {g.items.flatMap((r) => (r.type === "BADGE" || r.type === "ITEM" ? items.filter((x) => x.id === r.id) : [])).map((x, k) => (
+                    <ArtPreview key={k} svga={x.svga} svg={x.svg} wide={x.kind === "CARD_DECOR"} label={x.name} />
+                  ))}
+                </div>
                 <p className="text-muted">
                   &ldquo;{g.reason}&rdquo;, by {g.by ?? "staff"}, {ist(g.createdAt)}
                 </p>

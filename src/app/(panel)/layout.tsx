@@ -1,43 +1,19 @@
 import { Sidebar, type NavGroup } from "@/components/Sidebar";
-import { isStaff, requireMe, sellerStatus } from "@/lib/api";
+import { api, requireMe, sellerStatus } from "@/lib/api";
+import { menusFor } from "@/lib/nav";
 import { logout } from "../actions";
 
-// Signed-in area: a fixed sidebar of what this user can use (the API still checks every action), pages on the right.
+// Signed-in area: a fixed sidebar of the menus this person's role allows, pages on the right.
 export default async function PanelLayout({ children }: LayoutProps<"/">) {
   const me = await requireMe();
   const seller = (await sellerStatus()) === "APPROVED";
+  // Only the menus this person's role allows (the API checks every action again), grouped as in lib/nav.ts.
+  const mine = menusFor(me);
   const groups: NavGroup[] = [
-    ...(isStaff(me)
-      ? [
-          {
-            title: "People",
-            links: [
-              { href: "/admin", label: "Users & roles", icon: "users" as const },
-              { href: "/admin/agencies", label: "Agencies", icon: "agency" as const },
-              { href: "/admin/sellers", label: "Coin sellers", icon: "coins" as const },
-            ],
-          },
-          {
-            title: "App content",
-            links: [
-              { href: "/admin/gifts", label: "Gifts", icon: "gift" as const },
-              { href: "/admin/events", label: "Events", icon: "trophy" as const },
-              { href: "/admin/notices", label: "Notices", icon: "megaphone" as const },
-              { href: "/admin/items", label: "Items", icon: "gift" as const },
-            ],
-          },
-          {
-            title: "Money",
-            links: [
-              { href: "/admin/salaries", label: "Salaries", icon: "salary" as const },
-              { href: "/admin/withdrawals", label: "Withdrawals", icon: "withdraw" as const },
-              ...(me.staffRole === "OWNER" ? [{ href: "/admin/grants", label: "Give to user", icon: "coins" as const }] : []),
-            ],
-          },
-        ]
-      : []),
+    ...[...new Set(mine.map((m) => m.group))].map((title) => ({ title, links: mine.filter((m) => m.group === title).map(({ href, label, icon }) => ({ href, label, icon })) })),
     ...(seller ? [{ title: "Selling", links: [{ href: "/seller", label: "My seller wallet", icon: "wallet" as const }] }] : []),
   ];
+  const roleName = me.staffRole ? ((await api<{ roles: { id: string; name: string }[] }>("GET", "/staff-roles").catch(() => ({ roles: [] }))).roles.find((r) => r.id === me.staffRole)?.name ?? "Staff") : "Seller";
 
   const footer = (
     <div className="flex items-center gap-3 rounded-lg px-3 py-2">
@@ -47,7 +23,7 @@ export default async function PanelLayout({ children }: LayoutProps<"/">) {
       <span className="min-w-0 flex-1 leading-tight">
         <span className="block truncate text-sm font-semibold text-white">{me.displayName ?? "No name yet"}</span>
         <span className="block truncate text-xs text-white/50">
-          {me.staffRole ? me.staffRole.charAt(0) + me.staffRole.slice(1).toLowerCase() : "Seller"}, ID {me.publicId}
+          {roleName}, ID {me.publicId}
         </span>
       </span>
       <form action={logout}>

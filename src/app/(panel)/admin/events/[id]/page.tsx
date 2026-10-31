@@ -3,7 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { EventPartBuilder } from "@/components/EventBuilder";
 import { button, Card, danger, Flash, ghost, Hidden, input, ist, Pill } from "@/components/ui";
-import { api, isStaff, requireMe } from "@/lib/api";
+import { api, can, requireMe } from "@/lib/api";
 import { rewardText, type ItemOption, type Part, type Prize as RankPrize, type RewardItem } from "@/lib/rewards";
 import { approveEventPayouts, removeEventPart, saveEventBasics, saveEventBoard, saveEventTask, uploadEventImage } from "../../../../actions";
 
@@ -40,7 +40,7 @@ const local = (iso: string) => new Date(new Date(iso).getTime() + 5.5 * 3_600_00
 // One event: basics and look, banner and header, leaderboards, tasks, a live preview of its page, and its rewards.
 export default async function EventEditor({ params, searchParams }: PageProps<"/admin/events/[id]">) {
   const me = await requireMe();
-  if (!isStaff(me)) redirect("/dashboard");
+  if (!can(me, "events.manage")) redirect("/dashboard");
   const { id } = await params;
   const sp = await searchParams;
   const [e, options, page, payouts] = await Promise.all([
@@ -212,7 +212,7 @@ export default async function EventEditor({ params, searchParams }: PageProps<"/
                 ))}
               </ul>
             )}
-            {payouts.phase === "ended" && payouts.prizes.some((p) => !p.paid) && (
+            {payouts.phase === "ended" && payouts.prizes.some((p) => !p.paid) && can(me, "events.payout") && (
               <form action={approveEventPayouts} className="mt-3">
                 <Hidden name="id" value={e.id} />
                 <button className={button}>Approve and pay rewards</button>

@@ -1,11 +1,13 @@
 import { redirect } from "next/navigation";
 import { Card } from "@/components/ui";
-import { isStaff, requireMe, sellerStatus } from "@/lib/api";
+import { requireMe, sellerStatus } from "@/lib/api";
+import { menusFor } from "@/lib/nav";
 
 // Sends each person to the part of the panel they can use.
 export default async function Dashboard() {
   const me = await requireMe();
-  if (isStaff(me)) redirect("/admin");
+  const first = menusFor(me)[0];
+  if (first) redirect(first.href);
   if ((await sellerStatus()) === "APPROVED") redirect("/seller");
   return (
     <Card title="Nothing to manage here yet">

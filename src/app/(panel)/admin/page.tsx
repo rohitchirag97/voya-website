@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { button, Card, danger, first, Flash, fmt, ghost, Hidden, IdemKey, input, Pill } from "@/components/ui";
-import { api, isStaff, requireMe, type StaffRole } from "@/lib/api";
+import { api, can, requireMe, type StaffRole } from "@/lib/api";
 import { banUser, decideSeller, mintCoins, setSpecialId, setStaffRole, unbanUser } from "../../actions";
 
 type AdminUser = {
@@ -16,7 +16,7 @@ type AdminUser = {
   seller: { status: "PENDING" | "APPROVED" | "REJECTED"; balance: number; parentId: string | null } | null; // null: never applied
 };
 
-const ROLES: StaffRole[] = ["SUPPORT", "MODERATOR", "ADMIN", "OWNER"];
+type Role = { id: string; name: string };
 const BAN_LENGTHS = [
   ["24h", "24 hours"],
   ["3d", "3 days"],
@@ -28,10 +28,10 @@ const BAN_LENGTHS = [
 // India time, e.g. "2 Nov 2026, 3:45 pm".
 const when = (iso: string) => new Date(iso).toLocaleString("en-IN", { timeZone: "Asia/Kolkata", day: "numeric", month: "short", year: "numeric", hour: "numeric", minute: "2-digit" });
 
-// Find a user, then set their staff role (owner only), coin seller tag, or top up their seller wallet.
+// Find a user, then (each with its access switch) set their staff role, Special ID, coin seller tag, seller coins or ban.
 export default async function AdminUsers({ searchParams }: PageProps<"/admin">) {
   const me = await requireMe();
-  if (!isStaff(me)) redirect("/dashboard");
+  if (!can(me, "users.view")) redirect("/dashboard");
   const sp = await searchParams;
   const q = first(sp.q).trim();
   // A bad search shows a message instead of the error page.
@@ -39,13 +39,15 @@ export default async function AdminUsers({ searchParams }: PageProps<"/admin">) 
   const users = found?.users ?? [];
   const back = `/admin?q=${encodeURIComponent(q)}`;
   const owner = me.staffRole === "OWNER";
+  const roles = can(me, "roles.assign") ? (await api<{ roles: Role[] }>("GET", "/admin/roles")).roles : null;
+  const roleName = (id: string) => roles?.find((r) => r.id === id)?.name ?? id;
 
   return (
     <>
       <div>
         <h1 className="text-2xl font-extrabold">Users &amp; roles</h1>
         <p className="mt-1 text-sm text-muted">
-          {owner ? "As owner you can give any staff role, hand over ownership, and manage coin sellers." : "As admin you can manage coin sellers. Only the owner changes staff roles."}
+          Find someone, then use the tools your role allows. Staff roles and their access are set up in Roles.
         </p>
       </div>
       <Flash ok={sp.ok} error={sp.error || (found ? undefined : "Search didn’t work. Use a profile ID, special ID, or the start of a name (up to 40 characters).")} />
@@ -69,7 +71,7 @@ export default async function AdminUsers({ searchParams }: PageProps<"/admin">) 
                 <span className="flex flex-wrap items-center gap-2">
                   <span className="font-mono">ID {u.publicId}</span>
                   {u.specialId && <Pill tone="gold">Special {u.specialId}</Pill>}
-                  {u.staffRole && <Pill tone={u.staffRole === "OWNER" ? "gold" : "primary"}>{u.staffRole}</Pill>}
+                  {u.staffRole && <Pill tone={u.staffRole === "OWNER" ? "gold" : "primary"}>{roleName(u.staffRole)}</Pill>}
                   {seller && <Pill tone="success">{u.seller?.parentId ? "Sub seller" : "Coin seller"}</Pill>}
                   {u.seller?.status === "PENDING" && <Pill>Seller application pending</Pill>}
                   {u.status !== "ACTIVE" && <Pill tone="danger">{u.status}</Pill>}
@@ -79,20 +81,22 @@ export default async function AdminUsers({ searchParams }: PageProps<"/admin">) 
               }
             >
               <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                {owner && (
+                {roles && (
                   <form action={setStaffRole} className="space-y-2">
                     <Hidden name="userId" value={u.userId} />
                     <Hidden name="back" value={back} />
                     <label className="block text-xs font-semibold text-muted">
                       Staff role
                       <div className="mt-1.5 flex gap-2">
-                        <select name="role" defaultValue={u.staffRole ?? ""} disabled={self} className={`${input} w-full`}>
+                        <select name="role" defaultValue={u.staffRole ?? ""} disabled={self || u.staffRole === "OWNER"} className={`${input} w-full`}>
                           <option value="">Regular user</option>
-                          {ROLES.map((r) => (
-                            <option key={r} value={r}>
-                              {r === "OWNER" ? "OWNER (hand over ownership)" : r}
-                            </option>
-                          ))}
+                          {roles
+                            .filter((r) => r.id !== "OWNER" || owner)
+                            .map((r) => (
+                              <option key={r.id} value={r.id}>
+                                {r.id === "OWNER" ? "Owner (hand over ownership)" : r.name}
+                              </option>
+                            ))}
                         </select>
                         <button disabled={self} className={ghost}>Save</button>
                       </div>
@@ -101,6 +105,7 @@ export default async function AdminUsers({ searchParams }: PageProps<"/admin">) 
                   </form>
                 )}
 
+                {can(me, "users.specialId") && (
                 <div className="space-y-2">
                   <form action={setSpecialId}>
                     <Hidden name="userId" value={u.userId} />
@@ -122,7 +127,9 @@ export default async function AdminUsers({ searchParams }: PageProps<"/admin">) 
                     </form>
                   )}
                 </div>
+                )}
 
+                {can(me, "sellers.manage") && (
                 <form action={decideSeller} className="space-y-2">
                   <Hidden name="userId" value={u.userId} />
                   <Hidden name="back" value={back} />
@@ -130,9 +137,10 @@ export default async function AdminUsers({ searchParams }: PageProps<"/admin">) 
                   <p className="text-xs font-semibold text-muted">Coin seller tag</p>
                   <button className={seller ? danger : ghost}>{seller ? "Revoke seller" : u.seller?.status === "PENDING" ? "Approve application" : "Make coin seller"}</button>
                 </form>
+                )}
 
                 {/* Ban / unban: not for staff (change their role first) or yourself. */}
-                {!u.staffRole && !self && (
+                {!u.staffRole && !self && can(me, "users.ban") && (
                   u.status === "BANNED" ? (
                     <form action={unbanUser} className="space-y-2">
                       <Hidden name="userId" value={u.userId} />
@@ -164,7 +172,7 @@ export default async function AdminUsers({ searchParams }: PageProps<"/admin">) 
                   )
                 )}
 
-                {seller && (
+                {seller && can(me, "coins.mint") && (
                   <form action={mintCoins} className="space-y-2">
                     <Hidden name="userId" value={u.userId} />
                     <Hidden name="back" value={back} />

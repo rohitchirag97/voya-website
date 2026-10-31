@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { button, Card, danger, Flash, ghost, Hidden, input, Pill } from "@/components/ui";
-import { api, isStaff, requireMe } from "@/lib/api";
+import { api, can, requireMe } from "@/lib/api";
 import { createAgency, setAgencyImage, updateAgency } from "../../../actions";
 
 type Status = "ACTIVE" | "SUSPENDED" | "CLOSED";
@@ -20,7 +20,7 @@ const TONE = { ACTIVE: "success", SUSPENDED: "gold", CLOSED: "muted" } as const;
 // Staff create agencies for owners, and rename, suspend, reactivate or close them. Hosts join from the app.
 export default async function Agencies({ searchParams }: PageProps<"/admin/agencies">) {
   const me = await requireMe();
-  if (!isStaff(me)) redirect("/dashboard");
+  if (!can(me, "agencies.manage")) redirect("/dashboard");
   const sp = await searchParams;
   const { agencies } = await api<{ agencies: Agency[] }>("GET", "/admin/agencies");
 

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { button, Card, first, Flash, fmt, ghost, Hidden, Pill } from "@/components/ui";
-import { api, isStaff, requireMe } from "@/lib/api";
+import { api, can, requireMe } from "@/lib/api";
 import { paySalaries } from "../../../actions";
 
 type Person = { userId: string; displayName: string | null; publicId: number };
@@ -30,7 +30,7 @@ const shift = (month: string, by: number) => {
 // Review a finished month's host salaries and owner bonuses, then pay them once.
 export default async function Salaries({ searchParams }: PageProps<"/admin/salaries">) {
   const me = await requireMe();
-  if (!isStaff(me)) redirect("/dashboard");
+  if (!can(me, "salaries.pay")) redirect("/dashboard");
   const sp = await searchParams;
   const month = /^\d{4}-\d{2}$/.test(first(sp.month)) ? first(sp.month) : lastMonth();
   const s = await api<Sheet>("GET", `/admin/salaries/${month}`);

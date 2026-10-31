@@ -28,8 +28,9 @@ export async function api<T>(method: string, path: string, body?: unknown): Prom
   return data as T;
 }
 
-export type StaffRole = "SUPPORT" | "MODERATOR" | "ADMIN" | "OWNER";
-export type Me = { userId: string; displayName: string | null; publicId: number; staffRole: StaffRole | null };
+// A staff role id ("OWNER", or a role made in Roles); permissions: the role's access switches (server lib/permissions.ts).
+export type StaffRole = string;
+export type Me = { userId: string; displayName: string | null; publicId: number; staffRole: StaffRole | null; permissions: string[] };
 
 export const getMe = () => api<Me>("GET", "/me").catch(() => null);
 
@@ -40,7 +41,8 @@ export async function requireMe() {
   return me;
 }
 
-export const isStaff = (me: Me) => me.staffRole === "OWNER" || me.staffRole === "ADMIN";
+// Whether this user's role has a switch (pages redirect away otherwise; the API checks again on every action).
+export const can = (me: Me, perm: string) => (me.permissions ?? []).includes(perm);
 
 export async function sellerStatus() {
   return (await api<{ status: "PENDING" | "APPROVED" | "REJECTED" | null }>("GET", "/coin-sellers/me").catch(() => ({ status: null }))).status;

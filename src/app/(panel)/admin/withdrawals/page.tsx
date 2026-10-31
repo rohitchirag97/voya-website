@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { button, Card, danger, first, Flash, ghost, Hidden, input } from "@/components/ui";
-import { api, isStaff, requireMe } from "@/lib/api";
+import { api, can, requireMe } from "@/lib/api";
 import { decideWithdrawal } from "../../../actions";
 
 type Status = "PENDING" | "PAID" | "REJECTED";
@@ -29,7 +29,7 @@ const when = (iso: string) => new Date(iso).toLocaleString("en-IN", { dateStyle:
 // Send the money by bank transfer, then mark it paid with the reference. Rejecting returns the amount to their balance.
 export default async function Withdrawals({ searchParams }: PageProps<"/admin/withdrawals">) {
   const me = await requireMe();
-  if (!isStaff(me)) redirect("/dashboard");
+  if (!can(me, "withdrawals.decide")) redirect("/dashboard");
   const sp = await searchParams;
   const status = (TABS.find((t) => t.status === first(sp.status))?.status ?? "PENDING") as Status;
   const { withdrawals } = await api<{ withdrawals: Withdrawal[] }>("GET", `/admin/withdrawals?status=${status}`);

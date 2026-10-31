@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { button, Card, danger, first, Flash, fmt, ghost, Hidden, IdemKey, input, Pill } from "@/components/ui";
-import { api, isStaff, requireMe } from "@/lib/api";
+import { api, can, requireMe } from "@/lib/api";
 import { decideSeller, mintCoins } from "../../../actions";
 
 type Status = "PENDING" | "APPROVED" | "REJECTED";
@@ -23,7 +23,7 @@ const TABS: { status: Status; label: string }[] = [
 
 export default async function Sellers({ searchParams }: PageProps<"/admin/sellers">) {
   const me = await requireMe();
-  if (!isStaff(me)) redirect("/dashboard");
+  if (!can(me, "sellers.manage")) redirect("/dashboard");
   const sp = await searchParams;
   const status = (TABS.find((t) => t.status === first(sp.status))?.status ?? "APPROVED") as Status;
   const { sellers } = await api<{ sellers: Seller[] }>("GET", `/admin/coin-sellers?status=${status}`);

@@ -108,7 +108,7 @@ export async function setStaffRole(f: FormData) {
   const role = str(f, "role") || null;
   await run(backTo(f, "/admin"), async () => {
     await api("POST", `/admin/users/${str(f, "userId")}/staff-role`, { role });
-    return role === "OWNER" ? "Ownership handed over. You are now an admin." : `Role set to ${role ?? "regular user"}`;
+    return role === "OWNER" ? "Ownership handed over. You are now an admin." : role ? "Role given" : "Role removed";
   });
 }
 
@@ -509,5 +509,77 @@ export async function giveToUser(f: FormData) {
     }
     const r = await api<{ user: { name: string | null }; failures: string[] }>("POST", "/admin/grants", { user: str(f, "user"), reason: str(f, "reason"), items });
     return `Given to ${r.user.name ?? "them"}. They got a message in their inbox.${r.failures.length ? ` Some items couldn't be given: ${r.failures.join(", ")}.` : ""}`;
+  });
+}
+
+// ---------- roles ----------
+
+const roleBody = (f: FormData) => ({
+  name: str(f, "name"),
+  color: str(f, "color") || "#1D9BF0",
+  permissions: f.getAll("perm").map(String),
+  showTag: f.get("showTag") === "on",
+  badgeId: str(f, "badgeId") || null,
+  frameId: str(f, "frameId") || null,
+});
+
+export async function createRole(f: FormData) {
+  await run("/admin/roles", async () => {
+    await api("POST", "/admin/roles", roleBody(f));
+    return `Role "${str(f, "name")}" created. Give it to someone in Users.`;
+  });
+}
+
+export async function updateRole(f: FormData) {
+  await run("/admin/roles", async () => {
+    await api("PATCH", `/admin/roles/${encodeURIComponent(str(f, "id"))}`, roleBody(f));
+    return `"${str(f, "name")}" saved`;
+  });
+}
+
+export async function deleteRole(f: FormData) {
+  await run("/admin/roles", async () => {
+    const r = await api<{ members: number }>("DELETE", `/admin/roles/${encodeURIComponent(str(f, "id"))}`);
+    return r.members ? `Role deleted. ${r.members} ${r.members === 1 ? "person is" : "people are"} back to regular users.` : "Role deleted";
+  });
+}
+
+// ---------- SVIP designs ----------
+
+const SVIP = "/admin/svip";
+const FX_NAME: Record<string, string> = { entry: "entry banner", seat: "seat medal", name: "name shimmer", badge: "profile title badge" };
+
+export async function uploadSvipFx(f: FormData) {
+  const kind = str(f, "kind");
+  const tier = str(f, "tier");
+  await run(SVIP, async () => {
+    const body = new FormData();
+    const file = f.get("svga");
+    if (file instanceof File && file.size) body.append("svga", file);
+    await api("POST", `${SVIP}/fx/${encodeURIComponent(kind)}/${encodeURIComponent(tier)}`, body);
+    return `SVIP${tier} ${FX_NAME[kind] ?? kind} updated. Phones get it next time the app opens.`;
+  });
+}
+
+export async function removeSvipFx(f: FormData) {
+  const kind = str(f, "kind");
+  const tier = str(f, "tier");
+  await run(SVIP, async () => {
+    await api("DELETE", `${SVIP}/fx/${encodeURIComponent(kind)}/${encodeURIComponent(tier)}`);
+    return `SVIP${tier} no longer has a ${FX_NAME[kind] ?? kind}`;
+  });
+}
+
+export async function createSvipItem(f: FormData) {
+  await run(SVIP, async () => {
+    await api("POST", `${SVIP}/items/${encodeURIComponent(str(f, "kind"))}/${encodeURIComponent(str(f, "tier"))}`, itemBody(f, false));
+    return `"${str(f, "name")}" added for SVIP${str(f, "tier")} and above`;
+  });
+}
+
+export async function updateSvipItem(f: FormData) {
+  await run(SVIP, async () => {
+    await api("PATCH", `${SVIP}/items/${encodeURIComponent(str(f, "kind"))}/${encodeURIComponent(str(f, "itemId"))}`, itemBody(f, true));
+    return `"${str(f, "name")}" saved`;
   });
 }

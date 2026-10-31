@@ -2,7 +2,8 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { button, Flash, first, fmt, ghost, Hidden, input, Pill } from "@/components/ui";
-import { api, isStaff, requireMe } from "@/lib/api";
+import { ArtPreview } from "@/components/ArtPreview";
+import { api, can, requireMe } from "@/lib/api";
 import { createCategory, createGift, updateCategory, updateGift } from "../../../actions";
 
 type Change = { changes: Record<string, [unknown, unknown]>; at: string; by: string | null; byId: number };
@@ -38,7 +39,7 @@ const select = `${input} pr-8`;
 // whether it shows. One category at a time, one slim row per gift; a row opens to edit, preview and see its changes.
 export default async function Gifts({ searchParams }: PageProps<"/admin/gifts">) {
   const me = await requireMe();
-  if (!isStaff(me)) redirect("/dashboard");
+  if (!can(me, "gifts.manage")) redirect("/dashboard");
   const sp = await searchParams;
   const [{ gifts }, { categories }] = await Promise.all([
     api<{ gifts: Gift[] }>("GET", "/admin/gifts"),
@@ -312,13 +313,8 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-// Uploaded icons are served by the API (/games/...); built-in gifts may carry SVG art instead.
+// Uploaded icons are served by the API (/games/...); built-in gifts may carry SVG art instead. Hover to see the animation.
 function Icon({ gift }: { gift: Gift }) {
   const src = gift.assetUrl.startsWith("games/") ? `/${gift.assetUrl}` : gift.svg ? `data:image/svg+xml;utf8,${encodeURIComponent(gift.svg)}` : null;
-  return src ? (
-    // eslint-disable-next-line @next/next/no-img-element -- served by the API, not part of the site build
-    <img src={src} alt="" width={40} height={40} className="h-10 w-10 rounded-lg bg-surface-high object-contain p-0.5" />
-  ) : (
-    <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-surface-high font-extrabold text-muted">{gift.name[0]}</span>
-  );
+  return <ArtPreview image={src} svga={gift.effect} label={gift.name} />;
 }

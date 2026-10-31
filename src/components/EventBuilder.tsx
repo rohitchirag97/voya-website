@@ -2,6 +2,7 @@
 
 import { useState, type DragEvent, type ReactNode } from "react";
 import type { Filter, ItemOption, Part, Prize, RewardItem } from "@/lib/rewards";
+import { ArtPreview } from "./ArtPreview";
 import { button, ghost, input } from "./ui";
 
 // The event editor's leaderboard / task builder: what counts (a measure, plus filter blocks dragged in), and prizes
@@ -50,8 +51,6 @@ const filterFits = (m: string, f: Filter["type"]) => (m === "CP_POINTS" ? false 
 const chipKey = (r: RewardItem, items: ItemOption[]) => (r.type === "ITEM" ? (items.find((i) => i.id === r.id)?.kind ?? "AVATAR_FRAME") : r.type);
 const num = (v: string) => Number(v.replace(/[^0-9]/g, "")) || 0;
 const daysOf = (v: string) => (v.trim() ? Math.max(1, num(v)) : null);
-// The picture inside an item's SVG (uploaded items), for a thumbnail.
-const thumb = (i?: ItemOption) => i?.svg.match(/href="([^"]+)"/)?.[1] ?? null;
 
 function drag(e: DragEvent, kind: "reward" | "filter", key: string) {
   e.dataTransfer.setData("text/plain", `${kind}:${key}`);
@@ -366,16 +365,10 @@ function RewardEditor({ r, items, onChange }: { r: RewardItem; items: ItemOption
     );
   const kind = r.type === "BADGE" ? "BADGE" : chipKey(r, items);
   const pick = items.find((i) => i.id === r.id);
-  const src = thumb(pick);
   return (
     <>
       {tag}
-      {src ? (
-        // eslint-disable-next-line @next/next/no-img-element -- served by the API
-        <img src={src} alt="" className="h-8 w-8 rounded object-contain" />
-      ) : pick?.svga ? (
-        <span className="rounded bg-night px-1.5 py-0.5 text-[10px] font-bold text-white">SVGA</span>
-      ) : null}
+      {pick ? <ArtPreview svga={pick.svga} svg={pick.svg} wide={pick.kind === "CARD_DECOR"} label={pick.name} /> : null}
       <select aria-label="Which item" value={r.id} onChange={(e) => onChange({ ...r, id: e.target.value })} className={`${input} h-8 max-w-48`}>
         {items
           .filter((i) => i.kind === kind)

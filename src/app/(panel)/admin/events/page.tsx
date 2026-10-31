@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { button, Card, Flash, input, ist, Pill } from "@/components/ui";
-import { api, isStaff, requireMe } from "@/lib/api";
+import { api, can, requireMe } from "@/lib/api";
 import { createEvent } from "../../../actions";
 
 type Phase = "draft" | "upcoming" | "live" | "ended";
@@ -11,7 +11,7 @@ const TONE = { draft: "muted", upcoming: "gold", live: "success", ended: "primar
 // Every event, newest first; several can be live at once. Open one to set it up, preview it and approve its rewards.
 export default async function Events({ searchParams }: PageProps<"/admin/events">) {
   const me = await requireMe();
-  if (!isStaff(me)) redirect("/dashboard");
+  if (!can(me, "events.manage")) redirect("/dashboard");
   const sp = await searchParams;
   const { events } = await api<{ events: EventRow[] }>("GET", "/admin/events");
 

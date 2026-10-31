@@ -1,7 +1,8 @@
 import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
 import { button, Card, Flash, ghost, Hidden, input, Pill } from "@/components/ui";
-import { api, isStaff, requireMe } from "@/lib/api";
+import { ArtPreview } from "@/components/ArtPreview";
+import { api, can, requireMe } from "@/lib/api";
 import { createItem, updateItem } from "../../../actions";
 
 type Kind = "BADGE" | "AVATAR_FRAME" | "CARD_DECOR" | "CHAT_BUBBLE" | "ENTRY_EFFECT";
@@ -25,14 +26,12 @@ const KINDS: { kind: Kind; title: string; hint: string }[] = [
   { kind: "CHAT_BUBBLE", title: "Chat bubbles", hint: "Pick the bubble's colours. Optional: a small corner picture (PNG/WebP, about 88 × 52)." },
   { kind: "ENTRY_EFFECT", title: "Entry effects", hint: "An SVGA animation that plays when the owner enters a room." },
 ];
-// The picture inside an uploaded item's SVG (older built-in items are drawn SVG and show as "drawn").
-const picture = (svg: string) => svg.match(/href="([^"]+)"/)?.[1] ?? null;
 
 // Every item made here: an event prize (events pick from these) and/or a Mall item (sold once the Mall opens; hidden
 // until then). Only people who own one can wear it: won, given (Give to user), or bought. Owner and Admin only.
 export default async function Items({ searchParams }: PageProps<"/admin/items">) {
   const me = await requireMe();
-  if (!isStaff(me)) redirect("/dashboard");
+  if (!can(me, "items.manage")) redirect("/dashboard");
   const sp = await searchParams;
   const { items } = await api<{ items: Item[] }>("GET", "/admin/items");
 
@@ -95,18 +94,9 @@ export default async function Items({ searchParams }: PageProps<"/admin/items">)
   );
 }
 
+// Hover (or tap) to play the animation or see the picture full size.
 function Thumb({ item }: { item: Item }) {
-  const src = picture(item.svg);
-  if (item.kind === "CHAT_BUBBLE" && item.style)
-    return (
-      <span className="flex h-12 w-16 items-center justify-center rounded-xl border-2 text-xs font-bold" style={{ background: `linear-gradient(135deg, ${item.style.gradient[0]}, ${item.style.gradient[1]})`, borderColor: item.style.border, color: item.style.text }}>
-        Hi!
-      </span>
-    );
-  if (src)
-    // eslint-disable-next-line @next/next/no-img-element -- served by the API
-    return <img src={src} alt="" className={`h-12 rounded-lg bg-surface-high ${item.kind === "CARD_DECOR" ? "w-28 object-cover" : "w-12 object-contain"}`} />;
-  return <span className="flex h-12 w-12 items-center justify-center rounded-lg bg-night text-[10px] font-bold text-white">{item.svga ? "SVGA" : "drawn"}</span>;
+  return <ArtPreview svga={item.svga} svg={item.svg} bubble={item.kind === "CHAT_BUBBLE" ? item.style : null} wide={item.kind === "CARD_DECOR"} label={item.name} />;
 }
 
 function ItemForm({ kind, item }: { kind: Kind; item?: Item }) {

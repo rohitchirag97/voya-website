@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
 import { button, Card, danger, Flash, Hidden, input, ist, Pill } from "@/components/ui";
-import { api, requireMe } from "@/lib/api";
+import { api, can, requireMe } from "@/lib/api";
 import { createNotice, deleteNotice, updateNotice } from "../../../actions";
 
 type HomeTab = "BOTH" | "LIVE" | "ROOMS";
@@ -28,7 +28,7 @@ const TONE = { draft: "muted", upcoming: "gold", live: "success", ended: "primar
 // chosen, and optionally under the inbox Notices tile. Owner and Admin only, like events.
 export default async function Notices({ searchParams }: PageProps<"/admin/notices">) {
   const me = await requireMe();
-  if (me.staffRole !== "OWNER" && me.staffRole !== "ADMIN") redirect("/dashboard");
+  if (!can(me, "notices.manage")) redirect("/dashboard");
   const sp = await searchParams;
   const { notices } = await api<{ notices: Notice[] }>("GET", "/admin/notices");
 
