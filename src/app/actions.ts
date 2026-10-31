@@ -363,8 +363,10 @@ export async function saveEventBoard(f: FormData) {
   const index = str(f, "index");
   await run(eventPath(id), async () => {
     const rewards = [0, 1, 2, 3, 4]
-      .map((i) => ({ from: num(f, `r${i}from`), to: num(f, `r${i}to`) || num(f, `r${i}from`), ...rewardOf(f, `r${i}`) }))
+      .map((i) => ({ from: num(f, `r${i}from`), to: num(f, `r${i}to`) || num(f, `r${i}from`), min: num(f, `r${i}min`), ...rewardOf(f, `r${i}`) }))
       .filter((r) => r.from > 0 && (r.coins || r.badgeId));
+    const missing = rewards.find((r) => r.min < 1);
+    if (missing) throw new ApiError(400, "VALIDATION_ERROR", `Set a minimum score for the prize of rank ${missing.from}${missing.to > missing.from ? ` to ${missing.to}` : ""}`);
     await changeConfig(id, (c) => {
       const board = {
         id: index === "" ? "" : c.boards[Number(index)]!.id,

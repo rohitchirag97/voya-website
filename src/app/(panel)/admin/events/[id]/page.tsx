@@ -6,7 +6,7 @@ import { api, isStaff, requireMe } from "@/lib/api";
 import { approveEventPayouts, removeEventPart, saveEventBasics, saveEventBoard, saveEventTask, uploadEventImage } from "../../../../actions";
 
 type Reward = { coins?: number; badgeId?: string; badgeDays?: number | null };
-type Board = { id: string; title: string; metric: string; eventGiftsOnly: boolean; size: number; rewards: (Reward & { from: number; to: number })[] };
+type Board = { id: string; title: string; metric: string; eventGiftsOnly: boolean; size: number; rewards: (Reward & { from: number; to: number; min?: number })[] };
 type Task = { id: string; title: string; metric: string; eventGiftsOnly: boolean; target: number; daily: boolean; reward: Reward };
 type Event = {
   id: string;
@@ -269,7 +269,7 @@ function RewardInputs({ prefix, reward, badges }: { prefix: string; reward?: Rew
 }
 
 function BoardForm({ id, index, board, badges }: { id: string; index: string; board?: Board; badges: Options["badges"] }) {
-  const rows = [...(board?.rewards ?? []), ...Array(5).fill(null)].slice(0, 5) as ((Reward & { from: number; to: number }) | null)[];
+  const rows = [...(board?.rewards ?? []), ...Array(5).fill(null)].slice(0, 5) as ((Reward & { from: number; to: number; min?: number }) | null)[];
   return (
     <form action={saveEventBoard} className="space-y-3">
       <Hidden name="id" value={id} />
@@ -288,6 +288,7 @@ function BoardForm({ id, index, board, badges }: { id: string; index: string; bo
       <Check name="eventGiftsOnly" on={board?.eventGiftsOnly ?? false} label="Only count this event's gifts" />
       <div className="space-y-2">
         <p className="text-sm font-semibold">Rewards by rank (leave a row empty to skip it)</p>
+        <p className="text-xs text-muted">Every prize needs a minimum score: a rank that doesn&apos;t reach it wins nothing, so a few friends can&apos;t take a prize with a tiny total. It&apos;s shown on the event&apos;s Rules page.</p>
         {rows.map((r, i) => (
           <div key={i} className="flex flex-wrap items-center gap-2 text-sm">
             Rank
@@ -295,6 +296,8 @@ function BoardForm({ id, index, board, badges }: { id: string; index: string; bo
             to
             <input name={`r${i}to`} inputMode="numeric" pattern="[0-9]*" aria-label="To rank" defaultValue={r?.to ?? ""} className={`${input} w-16`} />
             <RewardInputs prefix={`r${i}`} reward={r ?? undefined} badges={badges} />
+            needs at least
+            <input name={`r${i}min`} inputMode="numeric" pattern="[0-9,]*" aria-label="Minimum score to win" placeholder="min" defaultValue={r?.min ?? ""} className={`${input} w-28`} />
           </div>
         ))}
       </div>
