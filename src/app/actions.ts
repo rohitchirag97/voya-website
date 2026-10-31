@@ -231,3 +231,36 @@ export async function removeSubSeller(f: FormData) {
     return `Sub seller removed. ${fmt(r.returned)} coins came back to your seller wallet.`;
   });
 }
+
+// ---------- gift catalog ----------
+
+// Sends the gift form on as multipart: text fields as typed, files only when chosen.
+const giftBody = (f: FormData) => {
+  const body = new FormData();
+  for (const k of ["name", "coinPrice", "maxQuantity", "sortOrder", "enabled"]) if (str(f, k)) body.append(k, k === "name" ? str(f, k) : str(f, k).replace(/[, ]/g, ""));
+  for (const k of ["icon", "effect"]) {
+    const file = f.get(k);
+    if (file instanceof File && file.size) body.append(k, file);
+  }
+  return body;
+};
+const giftCheck = (e: unknown) => {
+  if (e instanceof ApiError && e.code === "VALIDATION_ERROR")
+    throw new ApiError(400, "GIFT_INVALID", "Check the gift: a name up to 24 characters, a price from 1 to 1,00,00,000 coins, and up to 999 per send.");
+  throw e;
+};
+
+export async function createGift(f: FormData) {
+  await run("/admin/gifts", async () => {
+    const g = await api<{ name: string }>("POST", "/admin/gifts", giftBody(f)).catch(giftCheck);
+    return `"${g.name}" added. It's hidden: preview it, then press Show to put it in the gift box.`;
+  });
+}
+
+export async function updateGift(f: FormData) {
+  const enabled = str(f, "enabled");
+  await run("/admin/gifts", async () => {
+    const g = await api<{ name: string }>("PATCH", `/admin/gifts/${encodeURIComponent(str(f, "giftId"))}`, giftBody(f)).catch(giftCheck);
+    return enabled === "true" ? `"${g.name}" is in the gift box` : enabled === "false" ? `"${g.name}" is hidden` : `"${g.name}" saved`;
+  });
+}
