@@ -582,3 +582,37 @@ export async function updateSvipItem(f: FormData) {
     return `"${str(f, "name")}" saved`;
   });
 }
+
+// ---------- splash screens ----------
+
+const SPLASH = "/admin/splashes";
+
+export async function saveSplash(f: FormData) {
+  const id = str(f, "id");
+  await run("/admin/splash", async () => {
+    const [actionType, picked] = str(f, "action").split(":");
+    const body = new FormData();
+    body.append("title", str(f, "title"));
+    body.append("startsAt", istDate(f, "startsAt") ?? "");
+    body.append("endsAt", istDate(f, "endsAt") ?? "");
+    body.append("sortOrder", String(num(f, "sortOrder")));
+    body.append("actionType", actionType ?? "");
+    // A listed event/notice, else the typed link or ID, else (editing, same kind) the one it already opens.
+    const keep = str(f, "keep");
+    const keepType = keep.slice(0, keep.indexOf(":"));
+    const keepTarget = keep.slice(keep.indexOf(":") + 1);
+    body.append("actionTarget", picked || str(f, "target") || (keep && keepType === actionType ? keepTarget : ""));
+    if (id) body.append("enabled", f.get("enabled") === "on" ? "true" : "false");
+    const file = f.get("art");
+    if (file instanceof File && file.size) body.append("art", file);
+    await api(id ? "PATCH" : "POST", id ? `${SPLASH}/${encodeURIComponent(id)}` : SPLASH, body);
+    return id ? "Splash saved" : `"${str(f, "title")}" scheduled. Phones download it ahead and show it from its start.`;
+  });
+}
+
+export async function deleteSplash(f: FormData) {
+  await run("/admin/splash", async () => {
+    await api("DELETE", `${SPLASH}/${encodeURIComponent(str(f, "id"))}`);
+    return "Splash deleted";
+  });
+}
