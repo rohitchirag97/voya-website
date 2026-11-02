@@ -111,9 +111,9 @@ export default async function AdminUsers({ searchParams }: PageProps<"/admin">) 
                     <Hidden name="userId" value={u.userId} />
                     <Hidden name="back" value={back} />
                     <label className="block text-xs font-semibold text-muted">
-                      Special ID (3–9 letters or numbers)
+                      Special ID (4–6 letters or numbers)
                       <div className="mt-1.5 flex gap-2">
-                        <input name="specialId" defaultValue={u.specialId ?? ""} required pattern="[A-Za-z0-9]{3,9}" maxLength={9} autoCapitalize="characters" placeholder="e.g. 888 or VIP88" className={`${input} w-full uppercase`} />
+                        <input name="specialId" defaultValue={u.specialId ?? ""} required pattern="[A-Za-z0-9]{4,6}" maxLength={6} autoCapitalize="characters" placeholder="e.g. 8888 or VIP88" className={`${input} w-full uppercase`} />
                         <button className={ghost}>{u.specialId ? "Change" : "Give"}</button>
                       </div>
                     </label>

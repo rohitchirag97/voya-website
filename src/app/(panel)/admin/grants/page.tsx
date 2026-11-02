@@ -30,7 +30,7 @@ export default async function Grants({ searchParams }: PageProps<"/admin/grants"
       </div>
       <Flash ok={sp.ok} error={sp.error} />
 
-      <Card title="Give" hint="Find them by their 10-digit ID or their Special ID. Items are made in Items.">
+      <Card title="Give" hint="Find them by their 9-digit ID or their Special ID. Items are made in Items.">
         <form action={giveToUser} className="space-y-4">
           <div className="grid gap-3 sm:grid-cols-[220px_minmax(0,1fr)]">
             <label className="flex flex-col gap-1 text-sm font-semibold">

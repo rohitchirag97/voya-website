@@ -109,7 +109,7 @@ function SplashForm({ splash, events, notices }: { splash?: Splash; events: Opti
           )}
           <optgroup label="Give it below">
             <option value="room:">A room (paste its share link)</option>
-            <option value="profile:">A profile (10-digit or Special ID)</option>
+            <option value="profile:">A profile (9-digit or Special ID)</option>
             <option value="url:">A website (https:// link)</option>
           </optgroup>
         </select>
