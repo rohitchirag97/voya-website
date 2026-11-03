@@ -13,6 +13,7 @@ export const MENUS = [
   { group: "App content", href: "/admin/items", label: "Items", icon: "gift", perm: "items.manage" },
   { group: "App content", href: "/admin/svip", label: "SVIP designs", icon: "crown", perm: "svip.manage" },
   { group: "App content", href: "/admin/splash", label: "Splash screens", icon: "megaphone", perm: "splash.manage" },
+  { group: "Money", href: "/admin/game-profit", label: "Game profit", icon: "wallet", perm: "games.profit" },
   { group: "Money", href: "/admin/salaries", label: "Salaries", icon: "salary", perm: "salaries.pay" },
   { group: "Money", href: "/admin/withdrawals", label: "Withdrawals", icon: "withdraw", perm: "withdrawals.decide" },
   { group: "Money", href: "/admin/grants", label: "Give to user", icon: "coins", perm: "grants.give" },
