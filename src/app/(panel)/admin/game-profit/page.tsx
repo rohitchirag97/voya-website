@@ -72,7 +72,8 @@ export default async function GameProfit({ searchParams }: PageProps<"/admin/gam
       </nav>
 
       <Card title="Custom range" hint="India dates, both days included.">
-        <form className="flex flex-wrap items-end gap-3">
+        {/* key: remount on each view, or the select keeps its old choice (defaultValue only applies on mount) */}
+        <form key={`${from}${to}${group}`} className="flex flex-wrap items-end gap-3">
           <label className="flex flex-col gap-1 text-sm font-semibold">
             From
             <input type="date" name="from" required defaultValue={from} max={today()} className={input} />
