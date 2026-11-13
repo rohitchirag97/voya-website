@@ -22,6 +22,8 @@ const GAMES = [
   { v: "GREEDY_JUNGLE", l: "Greedy Jungle" },
   { v: "GREEDY_GALAXY", l: "Greedy Galaxy" },
   { v: "ROCKET", l: "Rocket" },
+  { v: "SLOT", l: "Lucky Slots" },
+  { v: "ROULETTE", l: "Roulette" },
 ];
 
 // The tray of reward items: what each chip adds when dropped.

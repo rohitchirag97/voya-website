@@ -23,4 +23,4 @@ export async function getPolicy(): Promise<Policy> {
 export const levelFor = (p: Policy, diamonds: number, hours: number) => p.levels.findLast((l) => diamonds >= l.diamonds && hours >= l.hours);
 
 export const num = (n: number) => Math.round(n).toLocaleString("en-IN");
-export const rupees = (n: number) => "₹" + (Math.round(n * 100) / 100).toLocaleString("en-IN", { maximumFractionDigits: 2 });
+export const rupees = (n: number) => "₹" + n.toLocaleString("en-IN", { maximumFractionDigits: n < 1 ? 3 : 2 }); // a diamond is ₹0.005

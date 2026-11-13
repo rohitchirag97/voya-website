@@ -496,6 +496,16 @@ export async function updateItem(f: FormData) {
   });
 }
 
+// ---------- feature switches ----------
+
+export async function setGamesSwitch(f: FormData) {
+  const enabled = str(f, "enabled") === "true";
+  await run("/admin/features", async () => {
+    await api("POST", "/admin/features/games", { enabled });
+    return enabled ? "Games are on. Everyone can see and play them now." : "Games are off. They're hidden from everyone now.";
+  });
+}
+
 // ---------- give to user (owner) ----------
 
 export async function giveToUser(f: FormData) {

@@ -36,7 +36,7 @@ export default async function Salaries({ searchParams }: PageProps<"/admin/salar
   const s = await api<Sheet>("GET", `/admin/salaries/${month}`);
   const toPay = s.hosts.filter((h) => !h.paid);
   const cash = s.hosts.filter((h) => h.paidIn === "CASH").reduce((t, h) => t + h.payPaise, 0) + s.owners.reduce((t, o) => t + o.payPaise, 0);
-  const coins = s.hosts.filter((h) => h.paidIn === "COINS").reduce((t, h) => t + h.payPaise / 10, 0);
+  const coins = s.hosts.filter((h) => h.paidIn === "COINS").reduce((t, h) => t + h.payPaise, 0);
 
   return (
     <>
@@ -44,7 +44,7 @@ export default async function Salaries({ searchParams }: PageProps<"/admin/salar
         <div>
           <h1 className="text-2xl font-extrabold">Salaries · {month}</h1>
           <p className="mt-1 text-sm text-muted">
-            Each host gets their level&apos;s salary minus what they converted early (₹0.05 a diamond); levels 1–2 as coins, higher as cash. Owners get 10% of their hosts&apos; full salaries as cash. The rest of each pool lapses.
+            Each host gets their level&apos;s salary minus what they converted early (₹0.005 a diamond); levels 1–2 as coins, higher as cash. Owners get 10% of their hosts&apos; full salaries as cash. The rest of each pool lapses.
           </p>
         </div>
         <nav className="flex gap-2" aria-label="Month">
@@ -90,7 +90,7 @@ export default async function Salaries({ searchParams }: PageProps<"/admin/salar
                     <td className="px-5 py-2.5">{hrs(h.micMinutes)}</td>
                     <td className="px-5 py-2.5">{rs(h.grossPaise)}</td>
                     <td className="px-5 py-2.5">{h.converted ? `−${rs(h.converted * 5)}` : "–"}</td>
-                    <td className="px-5 py-2.5 font-semibold">{h.paidIn === "NONE" ? "–" : h.paidIn === "COINS" ? `${fmt(h.payPaise / 10)} coins` : rs(h.payPaise)}</td>
+                    <td className="px-5 py-2.5 font-semibold">{h.paidIn === "NONE" ? "–" : h.paidIn === "COINS" ? `${fmt(h.payPaise)} coins` : rs(h.payPaise)}</td>
                     <td className="px-5 py-2.5">{h.paid && <Pill tone="success">paid</Pill>}</td>
                   </tr>
                 ))}

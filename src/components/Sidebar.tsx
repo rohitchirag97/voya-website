@@ -23,6 +23,7 @@ const ICONS = {
   wallet: <>{path("M3 7a2 2 0 0 1 2-2h13v4M3 7v11a2 2 0 0 0 2 2h15V9H5a2 2 0 0 1-2-2zM16 14.5h.01")}</>,
   shield: <>{path("M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6l8-3zM9 12l2 2 4-4")}</>,
   crown: <>{path("M3 8l4.5 4L12 5l4.5 7L21 8l-2 11H5L3 8z")}</>,
+  toggle: <><rect x="2" y="7" width="20" height="10" rx="5" /><circle cx="16" cy="12" r="3" /></>,
 };
 
 function Icon({ name }: { name: IconName }) {

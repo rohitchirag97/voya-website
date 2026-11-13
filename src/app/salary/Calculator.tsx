@@ -7,7 +7,7 @@ const field = "w-full rounded-xl border border-line bg-bg px-3 py-2.5 text-lg ta
 
 // Agency owners type a host's month and see the level, pay and what's left for the next level.
 export function Calculator({ policy: p }: { policy: Policy }) {
-  const [diamonds, setDiamonds] = useState("120000");
+  const [diamonds, setDiamonds] = useState("1200000");
   const [hours, setHours] = useState("28");
   const d = Math.max(0, Number(diamonds) || 0);
   const h = Math.max(0, Number(hours) || 0);
