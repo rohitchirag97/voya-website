@@ -85,7 +85,7 @@ export default async function Sellers({ searchParams }: PageProps<"/admin/seller
                       <Hidden name="userId" value={s.userId} />
                       <Hidden name="back" value={back} />
                       <IdemKey />
-                      <input name="amount" type="number" min={1} max={10_000_000} required placeholder="Coins to add" aria-label="Coins to add" className={`${input} w-full min-w-28`} />
+                      <input name="amount" type="number" min={1} required placeholder="Coins to add" aria-label="Coins to add" className={`${input} w-full min-w-28`} />
                       <button className={button}>Add coins</button>
                     </form>
                     <DecisionButton userId={s.userId} back={back} approve={false} label="Revoke" />

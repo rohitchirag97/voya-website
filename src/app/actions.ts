@@ -40,7 +40,8 @@ async function run(back: string, fn: () => Promise<string>, next?: () => string)
 
 // API messages written for people pass through; technical ones (validation dumps, bare codes) get a plain sentence.
 const FRIENDLY: Record<string, string> = {
-  VALIDATION_ERROR: "Please check what you entered. Amounts must be whole numbers from 1 to 1,00,00,000.",
+  VALIDATION_ERROR: "Please check what you entered. Amounts must be whole numbers of at least 1.",
+  AMOUNT_TOO_LARGE: "That’s more coins than a wallet can hold (about 214 crore). Use a smaller amount.",
   USER_NOT_FOUND: "We couldn’t find that user. Check the ID or name and try again.",
   CANNOT_BAN_STAFF: "Staff can’t be banned. Remove their staff role first.",
   CANNOT_BAN_SELF: "You can’t ban yourself.",

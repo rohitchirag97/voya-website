@@ -180,7 +180,7 @@ export default async function AdminUsers({ searchParams }: PageProps<"/admin">) 
                     <label className="block text-xs font-semibold text-muted">
                       Add coins to seller wallet
                       <div className="mt-1.5 flex gap-2">
-                        <input name="amount" type="number" min={1} max={10_000_000} required placeholder="Amount" className={`${input} w-full`} />
+                        <input name="amount" type="number" min={1} required placeholder="Amount" className={`${input} w-full`} />
                         <button className={button}>Add</button>
                       </div>
                     </label>
