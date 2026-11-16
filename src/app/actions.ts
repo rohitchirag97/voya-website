@@ -285,6 +285,35 @@ export async function updateCategory(f: FormData) {
   });
 }
 
+// ---------- karaoke songs ----------
+
+const songBody = (f: FormData) => {
+  const body = new FormData();
+  for (const k of ["title", "artist", "enabled", "lyrics"]) if (str(f, k)) body.append(k, str(f, k));
+  const mins = str(f, "minutes");
+  if (mins) body.append("durationMs", String(Math.round(Number(mins.replace(",", ".")) * 60_000)));
+  for (const k of ["track", "original", "cover", "lyricsFile"]) {
+    const file = f.get(k);
+    if (file instanceof File && file.size) body.append(k, file);
+  }
+  return body;
+};
+
+export async function createSong(f: FormData) {
+  await run(backTo(f, "/admin/songs"), async () => {
+    const s = await api<{ title: string }>("POST", "/admin/songs", songBody(f));
+    return `"${s.title}" added. It's in the song list now.`;
+  });
+}
+
+export async function updateSong(f: FormData) {
+  const enabled = str(f, "enabled");
+  await run(backTo(f, "/admin/songs"), async () => {
+    const s = await api<{ title: string }>("PATCH", `/admin/songs/${encodeURIComponent(str(f, "songId"))}`, songBody(f));
+    return enabled === "true" ? `"${s.title}" is in the song list` : enabled === "false" ? `"${s.title}" is hidden` : `"${s.title}" saved`;
+  });
+}
+
 // ---------- events ----------
 
 // Boards and tasks as the panel's builder sends them (components/EventBuilder.tsx); the API checks every field.

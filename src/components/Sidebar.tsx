@@ -12,6 +12,7 @@ type IconName = keyof typeof ICONS;
 
 const path = (d: string) => <path d={d} />;
 const ICONS = {
+  music: <>{path("M9 18V5l11-2v13")}<circle cx="6" cy="18" r="3" /><circle cx="17" cy="16" r="3" /></>,
   users: <>{path("M16 19v-1a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v1")}<circle cx="9.5" cy="7" r="3.5" />{path("M21 19v-1a4 4 0 0 0-3-3.9M15.5 3.6a3.5 3.5 0 0 1 0 6.8")}</>,
   coins: <><ellipse cx="9" cy="7" rx="6" ry="3" />{path("M3 7v5c0 1.7 2.7 3 6 3s6-1.3 6-3V7M3 12v5c0 1.7 2.7 3 6 3 1.3 0 2.5-.2 3.5-.6")}<circle cx="17" cy="16" r="4" /></>,
   agency: <>{path("M3 21h18M5 21V7l7-4 7 4v14M9 21v-5h6v5M9 10h.01M15 10h.01")}</>,

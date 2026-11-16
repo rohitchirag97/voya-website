@@ -8,6 +8,7 @@ export const MENUS = [
   { group: "People", href: "/admin/agencies", label: "Agencies", icon: "agency", perm: "agencies.manage" },
   { group: "People", href: "/admin/sellers", label: "Coin sellers", icon: "coins", perm: "sellers.manage" },
   { group: "App content", href: "/admin/gifts", label: "Gifts", icon: "gift", perm: "gifts.manage" },
+  { group: "App content", href: "/admin/songs", label: "Karaoke songs", icon: "music", perm: "songs.manage" },
   { group: "App content", href: "/admin/events", label: "Events", icon: "trophy", perm: "events.manage" },
   { group: "App content", href: "/admin/notices", label: "Notices", icon: "megaphone", perm: "notices.manage" },
   { group: "App content", href: "/admin/items", label: "Items", icon: "gift", perm: "items.manage" },
