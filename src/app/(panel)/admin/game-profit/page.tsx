@@ -4,10 +4,10 @@ import { button, Card, first, fmt, ghost, input } from "@/components/ui";
 import { api, can, requireMe } from "@/lib/api";
 
 type Group = "day" | "week" | "month" | "year";
-type Game = "jungle" | "galaxy" | "rocket" | "slot" | "roulette";
+type Game = "jungle" | "galaxy" | "rocket" | "slot" | "roulette" | "wheel";
 type Row = { period: string; game: Game; bet: number; paid: number };
 
-const GAMES: Record<Game, string> = { jungle: "Greedy Jungle", galaxy: "Greedy Galaxy", rocket: "Rocket", slot: "Lucky Slots", roulette: "Roulette" };
+const GAMES: Record<Game, string> = { jungle: "Greedy Jungle", galaxy: "Greedy Galaxy", rocket: "Rocket", slot: "Lucky Slots", roulette: "Roulette", wheel: "Wheel" };
 const GROUPS: Record<Group, string> = { day: "Day", week: "Week", month: "Month", year: "Year" };
 
 // Dates are India days, as YYYY-MM-DD.
